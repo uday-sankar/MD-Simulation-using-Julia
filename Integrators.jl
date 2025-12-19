@@ -13,7 +13,7 @@ Perform one velocity Verlet integration step.
 2. Calculate new forces F(t+dt)
 3. Update velocities: v(t+dt) = v(t) + 0.5*[F(t)+F(t+dt)]/m*dt
 """
-function velocity_verlet!(system::System, dt::Float64, force_func, potential_func)
+function velocity_verlet!(system::System, dt::Float64)
     n = size(system.positions, 1)
     
     # Save old forces
@@ -26,7 +26,7 @@ function velocity_verlet!(system::System, dt::Float64, force_func, potential_fun
     end
     
     # Calculate new forces
-    calculate_forces!(system, force_func, potential_func)
+    calculate_forces!(system)
     
     # Update velocities using average force
     for i in 1:n
@@ -95,15 +95,14 @@ Run a full MD simulation.
 
 Returns: (trajectory, energies, temperatures, potential_energies)
 """
-function run_simulation!(system::System, params::SimulationParams,
-                        force_func, potential_func;
+function run_simulation!(system::System, params::SimulationParams;
                         boundary_type=:reflective, verbose=true)
     
     n_particles = size(system.positions, 1)
     n_save = params.n_steps ÷ params.output_freq
     
     # Preallocate storage
-    trajectory = zeros(n_save, n_particles, 3)
+    trajectory_xyz = zeros(n_save, n_particles, 3)
     energies = zeros(n_save)
     temperatures = zeros(n_save)
     potential_energies = zeros(n_save)
@@ -117,21 +116,21 @@ function run_simulation!(system::System, params::SimulationParams,
     end
     
     # Initial force calculation
-    calculate_forces!(system, force_func, potential_func)
+    calculate_forces!(system)
     
     save_idx = 1
     
     # Main MD loop
     for step in 1:params.n_steps
         # Integration step
-        velocity_verlet!(system, params.dt, force_func, potential_func)
+        velocity_verlet!(system, params.dt)
         
         # Apply boundary conditions
         apply_boundary_conditions!(system, boundary_type)
         
         # Save data at specified intervals
         if step % params.output_freq == 0
-            trajectory[save_idx, :, :] = system.positions
+            trajectory_xyz[save_idx, :, :] = system.positions
             energies[save_idx] = total_energy(system)
             temperatures[save_idx] = temperature(system)
             potential_energies[save_idx] = system.potential_energy
@@ -145,7 +144,8 @@ function run_simulation!(system::System, params::SimulationParams,
             save_idx += 1
         end
     end
-    
+    trajectory = Trajectory(trajectory_xyz,energies,temperatures,potential_energies)
+
     return trajectory, energies, temperatures, potential_energies
 end
 
@@ -177,7 +177,7 @@ function run_damped_optimization!(system::System, params::SimulationParams,
     end
     
     # Initial force calculation
-    calculate_forces!(system, force_func, potential_func)
+    calculate_forces!(system)
     
     save_idx = 1
     prev_pe = system.potential_energy
@@ -193,7 +193,7 @@ function run_damped_optimization!(system::System, params::SimulationParams,
         end
         
         # Calculate new forces
-        calculate_forces!(system, force_func, potential_func)
+        calculate_forces!(system)
         
         # Update velocities
         for i in 1:n_particles

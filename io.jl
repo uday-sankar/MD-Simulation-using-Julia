@@ -82,11 +82,14 @@ comment line (frame info)
 - `filename`: Output filename
 - `atom_types`: String or Vector of atom type labels
 """
-function write_trajectory(trajectory::Array{Float64, 3}, filename::String;
+function write_trajectory(trajectory::Trajectory, filename::String;
                          atom_types="Ar")
-    
-    n_frames = size(trajectory, 1)
-    n_atoms = size(trajectory, 2)
+    trajectory_xyz = copy(trajectory.Trajectory_coords)
+    E = copy(trajectory.Tot_Energy)
+    Temp = copy(trajectory.Temperature)
+    ##
+    n_frames = size(trajectory_xyz, 1)
+    n_atoms = size(trajectory_xyz, 2)
     
     # Handle atom types
     if typeof(atom_types) == String
@@ -108,15 +111,16 @@ function write_trajectory(trajectory::Array{Float64, 3}, filename::String;
             write(f, "$n_atoms\n")
             
             # Write comment line
-            write(f, "Frame $frame\n")
+            Line2 = @sprintf("Frame %d\n", frame)
+            write(f, Line2)
             
             # Write coordinates
             for atom in 1:n_atoms
                 @printf(f, "%-4s  %12.6f  %12.6f  %12.6f\n",
                        types[atom],
-                       trajectory[frame, atom, 1],
-                       trajectory[frame, atom, 2],
-                       trajectory[frame, atom, 3])
+                       trajectory_xyz[frame, atom, 1],
+                       trajectory_xyz[frame, atom, 2],
+                       trajectory_xyz[frame, atom, 3])
             end
         end
     end
@@ -138,14 +142,16 @@ Write trajectory with additional metadata in comment lines.
 - `temperatures`: Vector of temperatures for each frame
 - `dt`: Timestep size
 """
-function write_enhanced_trajectory(trajectory::Array{Float64, 3}, filename::String;
+function write_enhanced_trajectory(trajectory::Trajectory, filename::String;
                                   atom_types="Ar",
-                                  energies=nothing,
-                                  temperatures=nothing,
                                   dt=nothing)
     
-    n_frames = size(trajectory, 1)
-    n_atoms = size(trajectory, 2)
+    trajectory_xyz = trajectory.Trajectory_coords
+    energies = trajectory.Tot_Energy
+    temperatures = trajectory.Temperature
+    ##
+    n_frames = size(trajectory_xyz, 1)
+    n_atoms = size(trajectory_xyz, 2)
     
     # Handle atom types
     if typeof(atom_types) == String
@@ -178,9 +184,9 @@ function write_enhanced_trajectory(trajectory::Array{Float64, 3}, filename::Stri
             for atom in 1:n_atoms
                 @printf(f, "%-4s  %12.6f  %12.6f  %12.6f\n",
                        types[atom],
-                       trajectory[frame, atom, 1],
-                       trajectory[frame, atom, 2],
-                       trajectory[frame, atom, 3])
+                       trajectory_xyz[frame, atom, 1],
+                       trajectory_xyz[frame, atom, 2],
+                       trajectory_xyz[frame, atom, 3])
             end
         end
     end

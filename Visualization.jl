@@ -4,8 +4,8 @@
 # =============================================================================
 
 # Only load visualization if Plots is available
-if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__PLOTTING_LOADED__)
-    using Plots
+#if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__PLOTTING_LOADED__)
+    #using Plots
     
     """
         plot_frame(positions; filename="frame.png", masses=nothing, box_size=20.0)
@@ -53,7 +53,7 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
     
     Create animated GIF of trajectory.
     """
-    function animate_trajectory(trajectory::Array{Float64, 3};
+    function animate_trajectory(trajectory::Trajectory;
                                filename="animation.gif",
                                masses=nothing,
                                frames=100,
@@ -61,9 +61,11 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
                                trail_length=20,
                                show_bonds=false,
                                bond_cutoff=1.5)
-        
-        n_timesteps = size(trajectory, 1)
-        n_atoms = size(trajectory, 2)
+        ##
+        trajectory_xyz = trajectory.Trajectory_coords
+        ##
+        n_timesteps = size(trajectory_xyz, 1)
+        n_atoms = size(trajectory_xyz, 2)
         
         if masses === nothing
             masses = ones(n_atoms)
@@ -97,11 +99,11 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
             if show_bonds
                 for pi in 1:n_atoms
                     for pj in pi+1:n_atoms
-                        r = norm(trajectory[i, pi, :] - trajectory[i, pj, :])
+                        r = norm(trajectory_xyz[i, pi, :] - trajectory_xyz[i, pj, :])
                         if r < bond_cutoff
-                            plot!([trajectory[i, pi, 1], trajectory[i, pj, 1]],
-                                  [trajectory[i, pi, 2], trajectory[i, pj, 2]],
-                                  [trajectory[i, pi, 3], trajectory[i, pj, 3]],
+                            plot!([trajectory_xyz[i, pi, 1], trajectory_xyz[i, pj, 1]],
+                                  [trajectory_xyz[i, pi, 2], trajectory_xyz[i, pj, 2]],
+                                  [trajectory_xyz[i, pi, 3], trajectory_xyz[i, pj, 3]],
                                   color=:gray, alpha=0.3, linewidth=1)
                         end
                     end
@@ -110,7 +112,7 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
             
             # Draw particles
             for p in 1:n_atoms
-                scatter!([trajectory[i, p, 1]], [trajectory[i, p, 2]], [trajectory[i, p, 3]],
+                scatter!([trajectory_xyz[i, p, 1]], [trajectory_xyz[i, p, 2]], [trajectory_xyz[i, p, 3]],
                         color=:blue, markersize=2*masses[p])
             end
             
@@ -118,9 +120,9 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
             trail_start = max(1, i - trail_length)
             if i > trail_start
                 for p in 1:n_atoms
-                    plot!(trajectory[trail_start:i, p, 1],
-                          trajectory[trail_start:i, p, 2],
-                          trajectory[trail_start:i, p, 3],
+                    plot!(trajectory_xyz[trail_start:i, p, 1],
+                          trajectory_xyz[trail_start:i, p, 2],
+                          trajectory_xyz[trail_start:i, p, 3],
                           color=:lightblue, alpha=0.4, linewidth=1)
                 end
             end
@@ -298,13 +300,13 @@ if isdefined(Main, :Plots) || (isdefined(Main, :__PLOTTING_LOADED__) && Main.__P
         return Rg, mean_dist
     end
     
-else
-    # Provide stub functions if Plots is not available
-    function plot_frame(args...; kwargs...)
-        @warn "Plots.jl not loaded. Visualization functions unavailable."
-    end
-    
-    animate_trajectory = plot_frame
-    plot_snapshots = plot_frame
-    analyze_cluster_dynamics = plot_frame
-end
+#else
+#    # Provide stub functions if Plots is not available
+#    function plot_frame(args...; kwargs...)
+#        @warn "Plots.jl not loaded. Visualization functions unavailable."
+#    end
+#    
+#    animate_trajectory = plot_frame
+#    plot_snapshots = plot_frame
+#    analyze_cluster_dynamics = plot_frame
+#end

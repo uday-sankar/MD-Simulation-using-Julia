@@ -180,6 +180,13 @@ println("\n" * "="^70)
 println("Example 4: Random Initialization")
 println("="^70)
 
+opt_params = SimulationParams(
+    n_steps = 5000,
+    dt = 0.001,
+    output_freq = 50,
+    boundary_size = 20.0
+)
+
 # Random stabilization
 random_geom, random_traj = stabilize_random!(
     20,                  # Number of particles

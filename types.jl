@@ -24,8 +24,8 @@ mutable struct System
     box_size::Float64               # Scalar
     time::Float64                   
     potential_energy::Float64       # Scalar
-    #Force_func::Function            # Function: vetor (Nx3) -> vector (Nx3)
-    #Potential_func::Function        # Function: vector (Nx3) -> Float
+    Force_func::Any            # Function: vetor (Nx3) -> vector (Nx3)
+    Potential_func::Any       # Function: vector (Nx3) -> Float
 end
 
 """
@@ -37,10 +37,12 @@ Forces are initialized to zero.
 function System(positions::Matrix{Float64}, 
                 velocities::Matrix{Float64},
                 masses::Vector{Float64},
-                box_size::Float64,)
+                box_size::Float64,F::Any,V::Any)
     n_particles = size(positions, 1)
     forces = zeros(n_particles, 3)
-    return System(positions, velocities, forces, masses, box_size, 0.0, 0.0)
+    system = System(positions, velocities, forces, masses, box_size, 0.0, 0.0,F,V)
+    calculate_forces!(system)
+    return system
 end
 
 """
@@ -56,5 +58,12 @@ struct SimulationParams
     function SimulationParams(;n_steps = 100, dt=0.1, output_freq = 5, boundary_size = 10)
         new(n_steps,dt,output_freq,boundary_size)
     end
+end
+
+mutable struct Trajectory
+    Trajectory_coords::Array{Float64,3}   # T x N x 3
+    Tot_Energy::Array{Float64,1}   # T x 1
+    Temperature::Array{Float64,1}  # T x 1
+    PE::Array{Float64,1}  # T x 1
 end
 

@@ -13,9 +13,9 @@ Also updates system.potential_energy.
 - `force_func`: Function f(r_vec) returning force vector
 - `potential_func`: Function V(r_vec) returning potential energy
 """
-function calculate_forces!(system::System, force_func, potential_func)
+function calculate_forces!(system::System)
     n = size(system.positions, 1)
-    
+    force_func, potential_func = system.Force_func, system.Potential_func
     # Zero out forces
     fill!(system.forces, 0.0)
     system.potential_energy = 0.0

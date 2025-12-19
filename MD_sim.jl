@@ -3,7 +3,7 @@
 # Example usage of the MDSimulation module
 # =============================================================================
 #using Pkg
-using Revise
+#using Revise
 using Plots 
 using Plots  # Optional, for visualization
 using Statistics
@@ -14,7 +14,7 @@ using .MD_Base
 # =============================================================================
 # Example 1: Simple Harmonic Oscillator System
 # =============================================================================
-fold = "Testing/Version 3"
+fold = "Testing/Version 3" # cuurent folder of interest
 
 println("="^70)
 println("Example 1: Harmonic Oscillator")

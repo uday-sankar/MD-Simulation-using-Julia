@@ -1,4 +1,4 @@
-# 3D_MD_Sim
+# Molecular Dynamics using Julia
 An Molecular dynamics simulation code written julia.
 
 The code has three main type of objects (implmented in types.jl):

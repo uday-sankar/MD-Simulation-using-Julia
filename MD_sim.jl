@@ -2,15 +2,19 @@
 # File: examples/run_simulation.jl
 # Example usage of the MDSimulation module
 # =============================================================================
-
-include("path/to/your/ModuleName.jl")
-
-using .MD_Base
+#using Pkg
+using Revise
+using Plots 
 using Plots  # Optional, for visualization
+using Statistics
+using LinearAlgebra
 
+include("Code/MD_Base.jl")
+using .MD_Base
 # =============================================================================
 # Example 1: Simple Harmonic Oscillator System
 # =============================================================================
+fold = "Testing/Version 3"
 
 println("="^70)
 println("Example 1: Harmonic Oscillator")
@@ -26,39 +30,35 @@ function harmonic_potential_example(r_vec)
 end
 
 # Initialize system on a grid
-positions, velocities = grid_initialize([3, 3, 3], [2.0, 2.0, 2.0])
+positions, velocities = grid_initialize([3, 2, 3], [2.0, 2.0, 2.0])
 n_particles = size(positions, 1)
 masses = ones(n_particles)
 
 # Create system
-system = System(positions, velocities, masses, 15.0)
+system = System(positions, velocities, masses, 15.0,harmonic_force_example,harmonic_potential_example)
 
 # Set simulation parameters
-params = SimulationParams(1000,0.01,10,15.0,)
+params = SimulationParams(n_steps=1000,dt=0.05,output_freq=1, boundary_size=15)
 ##
 
 # Run simulation
 trajectory, energies, temps, PE = run_simulation!(
     system, params,
-    harmonic_force_example,
-    harmonic_potential_example;
     boundary_type = :reflective,
     verbose = true
 )
 
 # Save results
-write_trajectory(trajectory, "harmonic_trajectory.xyz")
-write_enhanced_trajectory(trajectory, "harmonic_detailed.xyz",
-                         energies=energies,
-                         temperatures=temps,
+write_trajectory(trajectory, "$fold/harmonic_trajectory.xyz")
+write_enhanced_trajectory(trajectory, "$fold/harmonic_detailed.xyz",
                          dt=params.dt)
 
 # Visualize (if Plots is available)
 try
-    animate_trajectory(trajectory, filename="harmonic.gif", 
+    animate_trajectory(trajectory, filename="$fold/harmonic.gif", 
                       box_size=params.boundary_size, frames=50)
     plot_snapshots(trajectory, [1, :mid, :end], 
-                  filename="harmonic_snapshots.png")
+                  filename="$fold/harmonic_snapshots.png")
 catch e
     println("Visualization skipped (Plots.jl may not be available)")
 end
@@ -78,35 +78,39 @@ println("="^70)
 
 # Define LJ force and potential
 function lj_force_example(r_vec)
-    return lennard_jones_force(r_vec; epsilon=1.0, sigma=1.0, cutoff=3.0)
+    return MD_Base.lennard_jones_force(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
 end
 
 function lj_potential_example(r_vec)
-    return lennard_jones_potential(r_vec; epsilon=1.0, sigma=1.0, cutoff=3.0)
+    return MD_Base.lennard_jones_potential(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
 end
 
 # Grid stabilization
 opt_params = SimulationParams(
     n_steps = 5000,
-    dt = 0.001,
-    output_freq = 50,
+    dt = 0.01,
+    output_freq = 1,
     boundary_size = 20.0
 )
 
-final_geom, opt_trajectory = stabilize_grid!(
-    [3, 3, 3],           # Grid dimensions
-    [2.5, 2.5, 2.5],     # Spacing
+opt_trajectory, system = stabilize_grid!(
+    [4, 4, 4],           # Grid dimensions
+    [5.5, 5.5, 5.5],     # Spacing
     opt_params,
     lj_force_example,
     lj_potential_example;
     output_dir = "./"
 )
-
+final_geom = system.positions
 # Save optimized geometry
-write_xyz(final_geom, "lj_optimized.xyz")
+write_xyz(final_geom, "$fold/lj_optimized.xyz")
+##
+p = plot( 1:size(opt_trajectory.PE,1), opt_trajectory.PE)#,xlabel="Steps",ylabel="PE"
+savefig(p,"$fold/LJ_opt_PE.png")
+##
+println("\nOptimized geometry saved to $fold/lj_optimized.xyz")
 
-println("\nOptimized geometry saved to lj_optimized.xyz")
-
+write_trajectory(opt_trajectory,"$fold/lj_optimization_traj.xyz")
 
 # =============================================================================
 # Example 3: Production MD Run with LJ Potential
@@ -119,32 +123,29 @@ println("="^70)
 # Use the optimized geometry as starting point
 # Add some initial velocities
 n_atoms = size(final_geom, 1)
-initial_velocities = 0.1 * randn(n_atoms, 3)  # Random thermal velocities
+initial_velocities = 0.1 * ones(n_atoms, 3)#randn(n_atoms, 3)  # Random thermal velocities
 
 # Create new system
-lj_system = System(final_geom, initial_velocities, ones(n_atoms), 20.0)
+lj_system = System(final_geom, initial_velocities, ones(n_atoms), 10.0,lj_force_example,
+    lj_potential_example)
 
 # Production run parameters
 prod_params = SimulationParams(
     n_steps = 10000,
-    dt = 0.005,
-    output_freq = 50,
-    boundary_size = 20.0
+    dt = 0.05,
+    output_freq = 5,
+    boundary_size = 10.0
 )
 
 # Run production simulation
 lj_traj, lj_E, lj_T, lj_PE = run_simulation!(
-    lj_system, prod_params,
-    lj_force_example,
-    lj_potential_example;
+    lj_system, prod_params;
     boundary_type = :reflective,
     verbose = true
 )
 
 # Save trajectory
-write_enhanced_trajectory(lj_traj, "lj_production.xyz",
-                         energies=lj_E,
-                         temperatures=lj_T,
+write_enhanced_trajectory(lj_traj, "$fold/lj_production.xyz",
                          dt=prod_params.dt)
 
 # Analysis
@@ -160,16 +161,16 @@ println("  Radius of gyration: $(radius_of_gyration(lj_system))")
 println("  Mean interparticle distance: $(mean_interparticle_distance(lj_system))")
 
 # Create animation and analysis plots
-try
-    animate_trajectory(lj_traj, filename="lj_production.gif",
+#try
+    animate_trajectory(lj_traj, filename="$fold/lj_production.gif",
                       box_size=20.0, frames=100,
                       trail_length=30, show_bonds=true, bond_cutoff=1.5)
     
     analyze_cluster_dynamics(lj_traj, lj_E, lj_T, lj_PE,
                             filename_prefix="lj_analysis")
-catch e
-    println("Visualization skipped: $e")
-end
+#catch e
+#    println("Visualization skipped: $e")
+#end
 
 
 # =============================================================================
@@ -179,14 +180,12 @@ end
 println("\n" * "="^70)
 println("Example 4: Random Initialization")
 println("="^70)
-
 opt_params = SimulationParams(
     n_steps = 5000,
     dt = 0.001,
     output_freq = 50,
     boundary_size = 20.0
 )
-
 # Random stabilization
 random_geom, random_traj = stabilize_random!(
     20,                  # Number of particles
@@ -196,7 +195,7 @@ random_geom, random_traj = stabilize_random!(
     lj_potential_example
 )
 
-write_xyz(random_geom, "random_optimized.xyz")
+write_xyz(random_geom, "$fold/random_optimized.xyz")
 println("Random optimized geometry saved")
 
 
@@ -232,17 +231,16 @@ end
 # Run with Morse potential
 morse_positions, morse_velocities = grid_initialize([2, 2, 2], [2.0, 2.0, 2.0])
 morse_system = System(morse_positions, morse_velocities, 
-                      ones(size(morse_positions, 1)), 10.0)
+                      ones(size(morse_positions, 1)), 10.0, morse_force,morse_potential)
 
-morse_params = SimulationParams(1000, 0.01, 10, 10.0)
+morse_params = SimulationParams(n_steps=1000, dt=0.01, output_freq=10, boundary_size=10.0)
 
 morse_traj, morse_E, morse_T, morse_PE = run_simulation!(
-    morse_system, morse_params,
-    morse_force, morse_potential;
+    morse_system, morse_params,;
     verbose = true
 )
 
-write_trajectory(morse_traj, "morse_trajectory.xyz")
+write_trajectory(morse_traj, "$fold/morse_trajectory.xyz")
 println("Morse potential simulation complete")
 
 

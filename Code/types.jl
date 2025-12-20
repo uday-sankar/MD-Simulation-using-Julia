@@ -67,3 +67,15 @@ mutable struct Trajectory
     PE::Array{Float64,1}  # T x 1
 end
 
+mutable struct FIRE_params
+    a0::Float64
+    a::Float64
+    da::Float64
+    a_min::Float64
+    dt::Float64
+    ddt::Float64
+    dt_max::Float64
+    function FIRE_params(;a0=1.0,a=1.0,da=0.01,a_min=0.1,dt=0.1,ddt=0.01,dt_max=0.1)
+        new(a0,a,da,a_min,dt,ddt,dt_max)
+    end
+end

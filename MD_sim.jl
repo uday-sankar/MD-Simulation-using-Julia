@@ -73,36 +73,60 @@ println("  Mean temperature: $(sum(T)/length(T))")
 # =======================================================================================
 ##
 # Grid stabilization
-dt = 0.001
+using Revise
+using Plots  # ]add Plots if needed
+gr()         # Use GR backend for high-quality output # Optional, for visualization
+using Statistics
+using LinearAlgebra
+
+include("Code/MD_Base.jl")
+using .MD_Base
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+fold = "Version 4/Vel-Ver"
+println("\n" * "="^70)
+println("Example: Lennard-Jones Cluster Optimization")
+println("="^70)
+
+# Define LJ force and potential
+function lj_force_example(r_vec)
+    return MD_Base.lennard_jones_force(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
+end
+
+function lj_potential_example(r_vec)
+    return MD_Base.lennard_jones_potential(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
+end
+
+# Grid stabilization
 opt_params = SimulationParams(
-    n_steps = 500,
-    dt = dt,
+    n_steps = 100,
+    dt = 0.01,
     output_freq = 1,
     boundary_size = 20.0
 )
 
-opt_trajectory, system = stabilize_grid!(
-    [4, 4, 4],           # Grid dimensions
-    [2.5, 3.5, 8.5],     # Spacing
-    opt_params,
-    harmonic_force_example,
-    harmonic_potential_example;
-    output_dir = "./"
-)
+pos, vel = grid_initialize([3,3,3], [4.0,4.0,4.0])
+mass = ones(size(pos,1))
+system = System(pos, vel, mass, 10.0, lj_force_example, lj_potential_example)
+
+Fire_params = FIRE_params(dt=0.01)
+
+trajectory_opt = run_damped_optimization_FIRE!(system, opt_params, Fire_params)
+
+trajectory_opt = run_damped_optimization!(system, opt_params)
+
 final_geom = system.positions
 # Save optimized geometry
-write_xyz(final_geom, "$fold/lj_optimized.xyz")
-##
-p = plot( 1:size(opt_trajectory.PE,1), opt_trajectory.PE)#,xlabel="Steps",ylabel="PE"
-savefig(p,"$fold/LJ_opt_PE.png")
-##
-println("\nOptimized geometry saved to $fold/lj_optimized.xyz")
-
-write_trajectory(opt_trajectory,"$fold/lj_optimization_traj.xyz")
+write_xyz(final_geom, "$fold/lj_optimized_vel-ver.xyz")
 
 t_end = system.time
-Plot_data(opt_trajectory,1:1:500; smooth_flag=false,fold=fold,window_smooth=40)
+Time = 1:1:size(trajectory_opt.PE,1)
+Plot_data(trajectory_opt,Time; smooth_flag=false,fold=fold,window_smooth=40,plt_tot_E=false)
+##
+println("\nFinal Statistics:")
+println("  Energy drift: $(abs(trajectory_opt.Tot_Energy[end] - trajectory_opt.Tot_Energy[1]))")
+println("  Mean temperature: $(sum(trajectory_opt.Temperature)/length(trajectory_opt.Temperature))")
 
+write_trajectory(trajectory_opt,"$fold/trajectory_opt.xyz")
 ##
 # ==============================================================================================================================================
 ##

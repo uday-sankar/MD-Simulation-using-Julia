@@ -20,23 +20,12 @@ function velocity_verlet!(system::System, dt::Float64)
     old_forces = copy(system.forces)
     
     # Update positions
-    #for i in 1:n
-    #    system.positions[i, :] .+= system.velocities[i, :] * dt .+ 
-    #                                0.5 * old_forces[i, :] / system.masses[i] * dt^2
-    #end
     ## Vectorized code
     Mass_matrix = hcat(system.masses,system.masses,system.masses)
     system.positions .+= system.velocities .* dt .+ 0.5 .* old_forces ./ Mass_matrix .* dt^2
-
     # Calculate new forces
     calculate_forces!(system)
-    
     # Update velocities using average force
-    #for i in 1:n
-    #    avg_force = 0.5 * (old_forces[i, :] + system.forces[i, :])
-    #    system.velocities[i, :] .+= avg_force / system.masses[i] * dt
-    #end
-    ## Vectorized code
     avg_f = 0.5 * (old_forces+ system.forces)
     system.velocities .+= avg_f ./ Mass_matrix * dt
     # Update time
@@ -162,8 +151,7 @@ end
 Run damped dynamics for geometry optimization.
 Velocity is set to zero when power becomes negative.
 """
-function run_damped_optimization!(system::System, params::SimulationParams,
-                                 force_func, potential_func;
+function run_damped_optimization!(system::System, params::SimulationParams;
                                  verbose=true, tol=1e-12)
     
     n_particles = size(system.positions, 1)
@@ -233,10 +221,108 @@ function run_damped_optimization!(system::System, params::SimulationParams,
     
     # Trim arrays
     actual_saves = save_idx - 1
-    return (trajectory[1:actual_saves, :, :], 
-            energies[1:actual_saves],
-            temperatures[1:actual_saves],
-            potential_energies[1:actual_saves])
+    trajectory = Trajectory(trajectory[1:actual_saves, :, :],energies[1:actual_saves],temperatures[1:actual_saves],potential_energies[1:actual_saves])
+    return trajectory
+end
+
+function run_damped_optimization_FIRE!(system::System, params::SimulationParams, Fire_params::FIRE_params; 
+                                 verbose=true, tol=1e-12)
+    
+    n_particles = size(system.positions, 1)
+    max_saves = params.n_steps ÷ params.output_freq
+    
+    # Storage (will trim at end)
+    trajectory = zeros(max_saves, n_particles, 3)
+    energies = zeros(max_saves)
+    temperatures = zeros(max_saves)
+    potential_energies = zeros(max_saves)
+    
+    if verbose
+        println("Running damped optimization")
+        println("  Particles: $n_particles")
+        println("  Max steps: $(params.n_steps)")
+    end
+    
+    if params.dt != Fire_params.dt
+        print("dt from FIRE params different from that in simulation params\n using dt dt from FIRE params")
+    end
+    # Initial force calculation
+    calculate_forces!(system)
+    
+    save_idx = 1
+    prev_pe = system.potential_energy
+    
+    for step in 1:params.n_steps
+        # Save old forces
+        old_forces = copy(system.forces)
+        old_velocity = copy(system.velocities)
+        ## Update positions
+        velocity_verlet!(system,Fire_params.dt)
+        ## Check power (F·v)
+        power = sum(system.forces .* system.velocities)
+        ## FIRE steps
+        # Damping: zero velocity if power is negative
+        if power <= 0.0
+            # system updates
+            fill!(system.velocities, 0.0)
+            system.positions -= Fire_params.dt*old_velocity + 0.25*Fire_params.dt^2*(old_forces+system.forces)
+            # parameter updates
+            if Fire_params.ddt >= Fire_params.dt
+                Fire_params.ddt = Fire_params.dt/10.0
+            end
+            Fire_params.a = Fire_params.a0
+            Fire_params.dt -= Fire_params.ddt
+        else
+            system.velocities = (1.0 - Fire_params.a)*system.velocities + Fire_params.a*norm(system.velocities)*system.forces/norm(system.forces)
+            if Fire_params.da >= Fire_params.a
+                Fire_params.da = Fire_params.a/10.0
+            end
+            Fire_params.a -= Fire_params.da
+            Fire_params.dt += Fire_params.ddt
+            if Fire_params.a < Fire_params.a_min
+                Fire_params.a = Fire_params.a_min
+            end
+            if Fire_params.dt > Fire_params.dt_max
+                Fire_params.dt = Fire_params.dt_max
+            end
+        end
+        
+        # Save data
+        if step % params.output_freq == 0
+            trajectory[save_idx, :, :] = system.positions
+            energies[save_idx] = total_energy(system)
+            temperatures[save_idx] = temperature(system)
+            potential_energies[save_idx] = system.potential_energy
+            
+            if verbose && (save_idx % 10 == 0 || save_idx == 1)
+                @printf("Step %6d: PE = %12.6f, |F| = %12.6f, |v| = %12.6f\n",
+                       step, potential_energies[save_idx], 
+                       norm(system.forces), norm(system.velocities))
+            end
+            
+            # Check convergence
+            pe_change = abs(system.potential_energy - prev_pe)
+            force_norm = norm(system.forces)
+            vel_norm = norm(system.velocities)
+            
+            if pe_change < tol && force_norm < tol && vel_norm < tol
+                if verbose
+                    println("Convergence reached after $step steps")
+                end
+                save_idx += 1
+                break
+            end
+            
+            prev_pe = system.potential_energy
+            save_idx += 1
+        end
+    end
+    
+    # Trim arrays
+    actual_saves = save_idx - 1
+    trajectory = Trajectory(trajectory[1:actual_saves, :, :],energies[1:actual_saves],temperatures[1:actual_saves],potential_energies[1:actual_saves])
+    return trajectory
+            
 end
 
 

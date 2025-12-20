@@ -83,15 +83,14 @@ function stabilize_grid!(n_grid, spacing, params, force_func, potential_func;
     println("  Number of particles: $n_particles")
     
     # Run optimization
-    trajectory_xyz, E, T, PE = run_damped_optimization!(system, params, 
-                                                   force_func, potential_func)
-    
+    trajectory = run_damped_optimization!(system, params)
+    PE = trajectory.PE
     println("  PE change: $(PE[end] - PE[1])")
     
     # Final geometry (centered at origin)
-    com = center_of_mass(system)
+    #com = center_of_mass(system)
     #final_positions = system.positions .- com'
-    trajectory = Trajectory(trajectory_xyz,E,T,PE)
+    #trajectory = Trajectory(trajectory_xyz,E,T,PE)
     #
     return trajectory, system
 end
@@ -120,8 +119,7 @@ function stabilize_random!(n_particles, box_size, params, force_func, potential_
     println("  Number of particles: $n_particles")
     
     # Run optimization
-    trajectory_xyz, E, T, PE = run_damped_optimization!(system, params,
-                                                   force_func, potential_func)
+    trajectory= run_damped_optimization!(system, params)
     
     println("  PE change: $(PE[end] - PE[1])")
     
@@ -129,7 +127,5 @@ function stabilize_random!(n_particles, box_size, params, force_func, potential_
     com = center_of_mass(system)
     final_positions = system.positions .- com'
     
-    trajectory = Trajectory(trajectory_xyz,E,T,PE)
-
     return final_positions, trajectory
 end

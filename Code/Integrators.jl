@@ -20,20 +20,25 @@ function velocity_verlet!(system::System, dt::Float64)
     old_forces = copy(system.forces)
     
     # Update positions
-    for i in 1:n
-        system.positions[i, :] .+= system.velocities[i, :] * dt .+ 
-                                    0.5 * old_forces[i, :] / system.masses[i] * dt^2
-    end
-    
+    #for i in 1:n
+    #    system.positions[i, :] .+= system.velocities[i, :] * dt .+ 
+    #                                0.5 * old_forces[i, :] / system.masses[i] * dt^2
+    #end
+    ## Vectorized code
+    Mass_matrix = hcat(system.masses,system.masses,system.masses)
+    system.positions .+= system.velocities .* dt .+ 0.5 .* old_forces ./ Mass_matrix .* dt^2
+
     # Calculate new forces
     calculate_forces!(system)
     
     # Update velocities using average force
-    for i in 1:n
-        avg_force = 0.5 * (old_forces[i, :] + system.forces[i, :])
-        system.velocities[i, :] .+= avg_force / system.masses[i] * dt
-    end
-    
+    #for i in 1:n
+    #    avg_force = 0.5 * (old_forces[i, :] + system.forces[i, :])
+    #    system.velocities[i, :] .+= avg_force / system.masses[i] * dt
+    #end
+    ## Vectorized code
+    avg_f = 0.5 * (old_forces+ system.forces)
+    system.velocities .+= avg_f ./ Mass_matrix * dt
     # Update time
     system.time += dt
     
@@ -146,7 +151,7 @@ function run_simulation!(system::System, params::SimulationParams;
     end
     trajectory = Trajectory(trajectory_xyz,energies,temperatures,potential_energies)
 
-    return trajectory, energies, temperatures, potential_energies
+    return trajectory
 end
 
 """
@@ -184,32 +189,16 @@ function run_damped_optimization!(system::System, params::SimulationParams,
     
     for step in 1:params.n_steps
         # Save old forces
-        old_forces = copy(system.forces)
-        
-        # Update positions
-        for i in 1:n_particles
-            system.positions[i, :] .+= system.velocities[i, :] * params.dt .+ 
-                                        0.5 * old_forces[i, :] / system.masses[i] * params.dt^2
-        end
-        
-        # Calculate new forces
-        calculate_forces!(system)
-        
-        # Update velocities
-        for i in 1:n_particles
-            avg_force = 0.5 * (old_forces[i, :] + system.forces[i, :])
-            system.velocities[i, :] .+= avg_force / system.masses[i] * params.dt
-        end
-        
-        # Check power (F·v)
+        #old_forces = copy(system.forces)
+        ## Update positions
+        velocity_verlet!(system,params.dt)
+        ## Check power (F·v)
         power = sum(system.forces .* system.velocities)
         
         # Damping: zero velocity if power is negative
         if power <= 0.0
             fill!(system.velocities, 0.0)
         end
-        
-        system.time += params.dt
         
         # Save data
         if step % params.output_freq == 0

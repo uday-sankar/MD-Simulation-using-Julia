@@ -47,6 +47,7 @@ export write_enhanced_trajectory
 # Export visualization (conditional on Plots)
 export animate_trajectory, plot_frame, plot_snapshots
 export analyze_cluster_dynamics
+export Plot_data, smooth_boxcar
 
 # Include all submodules
 include("types.jl")

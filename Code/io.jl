@@ -82,15 +82,14 @@ comment line (frame info)
 - `filename`: Output filename
 - `atom_types`: String or Vector of atom type labels
 """
-function write_trajectory(trajectory::Trajectory, filename::String;
-                         atom_types="Ar")
+function write_trajectory(trajectory::Trajectory, filename::String)
     trajectory_xyz = copy(trajectory.Trajectory_coords)
     E = copy(trajectory.Tot_Energy)
     Temp = copy(trajectory.Temperature)
     ##
     n_frames = size(trajectory_xyz, 1)
     n_atoms = size(trajectory_xyz, 2)
-    
+    atom_types= trajectory.Atoms
     # Handle atom types
     if typeof(atom_types) == String
         types = fill(atom_types, n_atoms)
@@ -111,7 +110,7 @@ function write_trajectory(trajectory::Trajectory, filename::String;
             write(f, "$n_atoms\n")
             
             # Write comment line
-            Line2 = @sprintf("Frame %d\n", frame)
+            Line2 = @sprintf("%12.6f\n", trajectory.PE[frame])
             write(f, Line2)
             
             # Write coordinates

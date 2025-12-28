@@ -7,54 +7,69 @@ using LinearAlgebra
 include("Code/MD_Base.jl")
 using .MD_Base
 ##
-# Your data vectors (replace with yours)
-# time = 0:0.001:100.0  # ps
-# T = randn(length(time)) .+ 300.0  # K, noisy example
-# E_total = cumsum(randn(length(time))) .- 1000.0  # kJ/mol
-# PE = cumsum(randn(length(time))) .- 5000.0       # kJ/mol
-using Plots
+include("/Users/upm5017/Documents/Work/FORTRAN_Julia/Working files/H2CO_triplet.jl")
 ##
 # =============================================================================
-fold = "Version 4"
+fold = "/Users/upm5017/Documents/Work/MD_sim/Testing/Version 5: Molecules Implem"
 # Define force and potential functions
-function harmonic_force_example(r_vec)
-    return MD_Base.harmonic_force(r_vec; k=1.0, r_eq=4.0)
+function V(xyz::Matrix{Float64})
+    return ch2o_pes(xyz)
 end
-
-function harmonic_potential_example(r_vec)
-    return MD_Base.harmonic_potential(r_vec; k=1.0, r_eq=4.0)
+##
+dx = 0.01
+function Force(xyz::Matrix{Float64})
+    shape_xyz = size(xyz)
+    f = zeros(shape_xyz)
+    dummy_xyz = deepcopy(xyz)
+    for i in 1:shape_xyz[1]
+        for j in 1:shape_xyz[2]
+            Xn = copy(dummy_xyz)
+            Xp = copy(dummy_xyz)
+            Xn[i,j] += dx
+            Xp[i,j] -= dx
+            f[i,j] = ( V(Xp) - V(Xn) )/(2*dx)
+        end
+    end
+    return f
 end
-
+##
+xyz_guess = [-1.0 0.2 0.0; 1.0 0.0 0.0; 0.0 0.0 0.0; 0.10 0.0 1.3]
+##
 # Initialize system on a grid
-positions, velocities = grid_initialize([3, 4, 3], [2.0, 2.0, 2.0])
+positions = xyz_guess
+velocities = xyz_guess*0.0
 n_particles = size(positions, 1)
-masses = ones(n_particles)
-
+masses = [1.0, 1.0, 12.0, 16.0]
+boxsize = 5.0
+##
+Atoms = ["H", "H", "C", "O"]#["Ar" for i in 1:size(positions,1)]
 # Create system
-system = System(positions, velocities, masses, 15.0,harmonic_force_example,harmonic_potential_example)
-
+system = System(Atoms, Force,V,boxsize,false)
+##
+mass_mat = hcat(masses,masses,masses)
+State_init = MD_Base.SyState(Atoms,positions,velocities,velocities*0.0,mass_mat,0.0,0.0,0.0)
+##
+calculate_forces!(State_init,system)
 # Set simulation parameters
-dt = 0.05
+dt = 0.01
 params = SimulationParams(n_steps=1000,dt=dt,output_freq=1, boundary_size=15)
 ##
+fire_params = FIRE_params(dt=0.01,ddt=0.002,da=0.01)
+trajectory, Final_State = run_damped_optimization_FIRE!(State_init,
+    system, params, fire_params;
+    verbose = true, tol=1e-4)
 
-# Run simulation
-trajectory= run_simulation!(
-    system, params,
-    boundary_type = :reflective,
-    verbose = true
-)
 # Save results
-write_trajectory(trajectory, "$fold/harmonic_trajectory.xyz")
-write_enhanced_trajectory(trajectory, "$fold/harmonic_detailed.xyz",
+write_trajectory(trajectory, "$fold/H2CO_FIRE_stab.xyz")
+write_enhanced_trajectory(trajectory, "$fold/H2CO_FIRE_stab_detailed.xyz",
                          dt=params.dt)
 
 # Visualize (if Plots is available)
 try
-    animate_trajectory(trajectory, filename="$fold/harmonic.gif", 
+    animate_trajectory(trajectory, filename="$fold/H2CO_FIRE_stab.mp4", 
                       box_size=params.boundary_size, frames=50)
     plot_snapshots(trajectory, [1, :mid, :end], 
-                  filename="$fold/harmonic_snapshots.png")
+                  filename="$fold/H2CO_stab_snapshot.png")
 catch e
     println("Visualization skipped (Plots.jl may not be available)")
 end
@@ -63,8 +78,8 @@ energies = trajectory.Tot_Energy
 T = trajectory.Temperature
 PE = trajectory.PE
 ##
-t_end = system.time
-Plot_data(trajectory,0:dt:t_end; smooth_flag=false,fold=fold,window_smooth=40)
+t_end = Final_State.t
+Plot_data(trajectory,0:dt:t_end+dt; smooth_flag=false,fold=fold,window_smooth=40,plt_tot_E=false)
 ##
 println("\nFinal Statistics:")
 println("  Energy drift: $(abs(energies[end] - energies[1]))")
@@ -72,155 +87,17 @@ println("  Mean temperature: $(sum(T)/length(T))")
 ##
 # =======================================================================================
 ##
-# Grid stabilization
-dt = 0.001
-opt_params = SimulationParams(
-    n_steps = 500,
-    dt = dt,
-    output_freq = 1,
-    boundary_size = 20.0
-)
-
-opt_trajectory, system = stabilize_grid!(
-    [4, 4, 4],           # Grid dimensions
-    [2.5, 3.5, 8.5],     # Spacing
-    opt_params,
-    harmonic_force_example,
-    harmonic_potential_example;
-    output_dir = "./"
-)
-final_geom = system.positions
-# Save optimized geometry
-write_xyz(final_geom, "$fold/lj_optimized.xyz")
 ##
-p = plot( 1:size(opt_trajectory.PE,1), opt_trajectory.PE)#,xlabel="Steps",ylabel="PE"
-savefig(p,"$fold/LJ_opt_PE.png")
+params = SimulationParams(n_steps=1000,dt=0.01,output_freq=1, boundary_size=5)
 ##
-println("\nOptimized geometry saved to $fold/lj_optimized.xyz")
-
-write_trajectory(opt_trajectory,"$fold/lj_optimization_traj.xyz")
-
-t_end = system.time
-Plot_data(opt_trajectory,1:1:500; smooth_flag=false,fold=fold,window_smooth=40)
-
-##
-# ==============================================================================================================================================
-##
-using Molly
-
-# Setup Molly system for force calculations only
-function setup_molly_system(positions::Matrix{Float64}, atom_types::Vector{String})
-    n_atoms = size(positions, 1)
-    
-    # Create Molly atoms with LJ parameters
-    # You can load these from forcefield files
-    atoms = [Atom(
-        index=i, 
-        charge=0.0,
-        mass=get_mass(atom_types[i]),
-        σ=get_sigma(atom_types[i]),  # LJ sigma
-        ϵ=get_epsilon(atom_types[i])  # LJ epsilon
-    ) for i in 1:n_atoms]
-    
-    # Convert positions to Molly format (with units)
-    coords = [SVector(positions[i,:]...)u"Å" for i in 1:n_atoms]
-    
-    # Define interactions
-    lj_inter = LennardJones(
-        use_neighbors=true,
-        cutoff=DistanceCutoff(10.0u"Å")
-    )
-    
-    # Create system
-    sys = System(
-        atoms=atoms,
-        coords=coords,
-        boundary=CubicBoundary(20.0u"Å"),
-        pairwise_inters=(lj_inter,)
-    )
-    
-    return sys
-end
-
-# Wrapper for your MD code
-function molly_force_wrapper(positions::Matrix{Float64}, molly_sys)
-    n_atoms = size(positions, 1)
-    
-    # Update positions in Molly system
-    new_coords = [SVector(positions[i,:]...)u"Å" for i in 1:n_atoms]
-    updated_sys = Molly.System(
-        molly_sys;
-        coords=new_coords
-    )
-    
-    # Calculate forces and energy
-    forces_molly = Molly.forces(updated_sys)
-    energy = Molly.potential_energy(updated_sys)
-    
-    # Convert back to your format (N×3 matrix, no units)
-    forces = zeros(n_atoms, 3)
-    for i in 1:n_atoms
-        forces[i, :] = ustrip.(u"kJ * mol^-1 * Å^-1", forces_molly[i])
-    end
-    energy_val = ustrip(u"kJ/mol", energy)
-    
-    return energy_val, forces
-end
-
-# Use in your existing code
-molly_sys = setup_molly_system(initial_positions, atom_types)
-
-# Create closure for your integrator
-force_func = (pos) -> molly_force_wrapper(pos, molly_sys)[2]
-potential_func = (pos) -> molly_force_wrapper(pos, molly_sys)[1]
-
-# Use with your existing MDSimulation code
-trajectory, E, T, PE = run_simulation!(
+com = center_of_mass(Final_State)
+CoM = vcat(com,com,com,com)
+Final_State.Coords = Final_State.Coords - CoM
+Final_State.Vel = [ -1.0 0.0 -0.0; +1.0 -0.0 0.0; -1.0 0.0 0.0; -1.0 -0.0 0.0]
+# Run simulation
+trajectory_MD_run, Final_State_MD = run_simulation!(Final_State,
     system, params,
-    force_func,
-    potential_func
+    boundary_type = :reflective,
+    verbose = true
 )
-
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++
-fold = "Version 4"
-println("\n" * "="^70)
-println("Example: Lennard-Jones Cluster Optimization")
-println("="^70)
-
-# Define LJ force and potential
-function lj_force_example(r_vec)
-    return MD_Base.lennard_jones_force(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
-end
-
-function lj_potential_example(r_vec)
-    return MD_Base.lennard_jones_potential(r_vec; epsilon=1.0, sigma=3.0, cutoff=8.0)
-end
-
-# Grid stabilization
-opt_params = SimulationParams(
-    n_steps = 5000,
-    dt = 0.01,
-    output_freq = 1,
-    boundary_size = 20.0
-)
-
-opt_trajectory, system = stabilize_grid!(
-    [4, 4, 4],           # Grid dimensions
-    [5.5, 5.5, 5.5],     # Spacing
-    opt_params,
-    lj_force_example,
-    lj_potential_example;
-    output_dir = "./"
-)
-final_geom = system.positions
-# Save optimized geometry
-write_xyz(final_geom, "$fold/lj_optimized.xyz")
-
-t_end = system.time
-Time = 0:0.01:t_end#size(opt_trajectory.PE,1)
-Plot_data(opt_trajectory,Time; smooth_flag=false,fold=fold,window_smooth=40,plt_tot_E=false)
-##
-println("\nFinal Statistics:")
-println("  Energy drift: $(abs(energies[end] - energies[1]))")
-println("  Mean temperature: $(sum(T)/length(T))")
+write_trajectory(trajectory_MD_run, "$fold/H2CO_MD_run.xyz")

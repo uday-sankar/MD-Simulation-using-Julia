@@ -23,10 +23,10 @@ using LinearAlgebra
 using Printf
 
 # Export types
-export System, SimulationParams
+export System, SimulationParams, FIRE_params
 
 # Export integrators
-export velocity_verlet!, run_simulation!, run_damped_optimization!
+export velocity_verlet!, run_simulation!, run_damped_optimization!, run_damped_optimization_FIRE!
 
 # Export force calculation
 export calculate_forces!

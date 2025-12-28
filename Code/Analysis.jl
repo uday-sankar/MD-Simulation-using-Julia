@@ -55,8 +55,8 @@ function center_of_mass(State::SyState)
     #for i in 1:size(system.positions, 1)
     #    com .+= system.masses[i] * system.positions[i, :]
     #end
-    mass_vec = deepcopy(State.M[1,:])
-    com = mass_vec * State.Coords ./sum(mass_vec)
+    mass_vec = deepcopy(State.M[:,1])
+    com = mass_vec' * State.Coords /sum(mass_vec)
     return com #com ./ total_mass
 end
 

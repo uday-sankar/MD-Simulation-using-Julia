@@ -38,8 +38,8 @@ function calculate_forces!(State::SyState,system::System)
             end
         end
     else # if global Forces are given
-        State.force = deepcopy(force_func(state.Coords))
-        State.Ene = potential_func(state.Coords)
+        State.force = deepcopy(force_func(State.Coords))
+        State.Ene = potential_func(State.Coords)
     end
     State.TotE = 0.5*sum(State.M .* State.Vel.^2) + State.Ene
     return nothing

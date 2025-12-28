@@ -1,0 +1,12 @@
+An Molecular dynamics simulation code written julia.
+
+Capabilities:
+- Initiaze geometry as a grid in 3D
+- Optimize geometries using dampened velocity verlet 
+- Perform MD simulations for any user defined interatomic potential
+- Outputs VMD comaptible files for vizualization
+
+Limitations:
+- Current implementations assumes all particles are identical 
+- No explicit way to grab a forcce field, as of now
+

@@ -112,6 +112,7 @@ mutable struct Trajectory
     Tot_Energy::Array{Float64,1}   # T x 1
     Temperature::Array{Float64,1}  # T x 1
     PE::Array{Float64,1}  # T x 1
+    Atoms::Vector{String}
 end
 
 mutable struct FIRE_params

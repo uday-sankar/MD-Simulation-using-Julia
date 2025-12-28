@@ -3,47 +3,94 @@
 # =============================================================================
 
 """
+    SyState
+
+    Mutable struct which contain all the information about the current state of the system
+    Fields:
+    - Coords : Positions
+    - Vel : Velocity
+    - force : Forces
+    - M : mass
+    - Ene : Potential Energy
+    - TotE : Total Energy of the system if needed 
+    - t : time 
+"""
+mutable struct SyState 
+    Atoms::Vector{String}
+    Coords::Matrix{Float64}     # N x 3
+    Vel::Matrix{Float64}        # N × 3
+    force::Matrix{Float64}      # N × 3
+    M::Matrix{Float64}          # N x 1
+    Ene::Float64                # Scalar
+    TotE::Float64               # Scalar
+    t::Float64                  # Scalar 
+end
+
+"""
+SysState 
+"""
+#function SyState(Atoms::Vector{String},Coords::Matrix{Float64},Vel::Matrix{Float64},force::Matrix{Float64},M::Vector{Float64}, Ene::Float64, TotE::Float64, t::Float64)
+#    return SyState(Atoms)
+#end
+
+"""
     System
 
 Mutable struct containing all system state information.
 
 # Fields
-- `positions::Matrix{Float64}`: Particle positions (N×3)
-- `velocities::Matrix{Float64}`: Particle velocities (N×3)
-- `forces::Matrix{Float64}`: Forces on particles (N×3)
-- `masses::Vector{Float64}`: Particle masses (N,)
+- Atoms : A vector containing the symbol of atoms involved.
 - `box_size::Float64`: Boundary box size
-- `time::Float64`: Current simulation time
-- `potential_energy::Float64`: Current potential energy
+- Force_func : The function describing the force
+- Potenial_func : The potential energy surface
+- Inter_atomic_tag : A tag that determines whether the force and potential functions are inter atomic or global 
 """
 mutable struct System
-    positions::Matrix{Float64}      # N × 3
-    velocities::Matrix{Float64}     # N × 3
-    forces::Matrix{Float64}         # N × 3
-    masses::Vector{Float64}         # N
+#   positions::Matrix{Float64}      # N × 3
+#   velocities::Matrix{Float64}     # N × 3
+#   forces::Matrix{Float64}         # N × 3
+#   masses::Vector{Float64}         # N
+#   time::Float64                   # Scalar
+#   potential_energy::Float64       # Scalar
+#   State_init::SyState             # Intial state of the system
+    Atoms::Vector{String}           # N x 1
+    N_atoms::Int64                  # Scalar (N)
+    Force_func::Function                 # Function: vetor (Nx3) -> vector (Nx3)
+    Potential_func::Function            # Function: vector (Nx3) -> Float
     box_size::Float64               # Scalar
-    time::Float64                   
-    potential_energy::Float64       # Scalar
-    Force_func::Any            # Function: vetor (Nx3) -> vector (Nx3)
-    Potential_func::Any       # Function: vector (Nx3) -> Float
+    Inter_atomic_tag::Bool          # true/false
+
 end
 
 """
-    System(positions, velocities, masses, box_size)
+    System( Atoms, box_size, force_func, P_func, Inter_atomic_tag)
 
 Construct a System with initial positions, velocities, masses, and box size.
 Forces are initialized to zero.
 """
-function System(positions::Matrix{Float64}, 
-                velocities::Matrix{Float64},
-                masses::Vector{Float64},
-                box_size::Float64,F::Any,V::Any)
-    n_particles = size(positions, 1)
-    forces = zeros(n_particles, 3)
-    system = System(positions, velocities, forces, masses, box_size, 0.0, 0.0,F,V)
-    calculate_forces!(system)
+function System(Atoms::Vector{String}, F::Function, V::Function, box_size::Float64, inter_atomic::Bool=true)
+    N_atoms = size(Atoms, 1)
+    system = System(Atoms, N_atoms, F, V, box_size, inter_atomic)
+    #calculate_forces!(system)
     return system
 end
+
+# """
+#     System(positions, velocities, masses, box_size)
+# 
+# Construct a System with initial positions, velocities, masses, and box size.
+# Forces are initialized to zero.
+# """
+# function System(positions::Matrix{Float64}, 
+#                 velocities::Matrix{Float64},
+#                 masses::Vector{Float64},
+#                 box_size::Float64,F::Any,V::Any,inter_atomic::Bool=true)
+#     n_particles = size(positions, 1)
+#     forces = zeros(n_particles, 3)
+#     system = System(positions, velocities, forces, masses, box_size, 0.0, 0.0, F, V, inter_atomic)
+#     calculate_forces!(system)
+#     return system
+# end
 
 """
     SimulationParams

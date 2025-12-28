@@ -64,7 +64,7 @@ end
 Initialize grid and run damped optimization to find stable configuration.
 """
 function stabilize_grid!(n_grid, spacing, params, force_func, potential_func;
-                        masses=nothing, output_dir="./", animate=false)
+                        masses=nothing,Atoms=nothing, output_dir="./", animate=false)
     
     println("Grid Stabilization Started")
     
@@ -75,15 +75,22 @@ function stabilize_grid!(n_grid, spacing, params, force_func, potential_func;
     if masses === nothing
         masses = ones(n_particles)
     end
-    
+    if Atoms === nothing
+        Atoms = ["Ar" for i in 1:size(positions,1)]
+    end
     # Create system
     box_size = max(n_grid[1]*spacing[1], n_grid[2]*spacing[2], n_grid[3]*spacing[3])
-    system = System(positions, velocities, masses, box_size, force_func, potential_func)
-    
+    # System defnetion  
+    system = System(Atoms, force_func,potential_func,box_size)
+    # State defenitions
+    mass_mat = hcat(masses,masses,masses)
+    State_init = SyState(Atoms,positions,velocities,velocities*0.0,mass_mat,0.0,0.0,0.0)
+    calculate_forces!(State_init,system)
+    dt = 0.05
     println("  Number of particles: $n_particles")
     
     # Run optimization
-    trajectory = run_damped_optimization!(system, params)
+    trajectory, Final_State = run_damped_optimization!(State_init,system, params)
     PE = trajectory.PE
     println("  PE change: $(PE[end] - PE[1])")
     
@@ -92,7 +99,7 @@ function stabilize_grid!(n_grid, spacing, params, force_func, potential_func;
     #final_positions = system.positions .- com'
     #trajectory = Trajectory(trajectory_xyz,E,T,PE)
     #
-    return trajectory, system
+    return trajectory, system, Final_State
 end
 
 """

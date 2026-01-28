@@ -27,11 +27,56 @@ mutable struct SyState
 end
 
 """
-SysState 
+    SyState
+    Initialize a State for the system 
 """
-#function SyState(Atoms::Vector{String},Coords::Matrix{Float64},Vel::Matrix{Float64},force::Matrix{Float64},M::Vector{Float64}, Ene::Float64, TotE::Float64, t::Float64)
-#    return SyState(Atoms)
-#end
+function SyState(Atoms::Vector{String},Coords::Matrix{Float64}; Vel::Matrix{Float64}=nothing,force::Matrix{Float64}=nothing,M::Any=nothing, Ene::Float64=0.0, TotE::Float64=0.0, t::Float64=0.0)
+    Coord_shape = size(Coords)
+    N = size(Atoms)[1]
+    if Coord_shape[2] == 3
+        if Coord_shape[1] == N
+            print("\nCartesian Coordinates Supplied")
+        else
+            print("\nUnknown dimension used for coordinate matrix.\n \t !!! Code likely to break in future !!!. Use either flattened internal coordinates or cartesian (Nx3).")
+        end
+    elseif Coord_shape[2] == 1
+        print("\nFlattened Internal/Custom Coordinates Used")
+    else
+        print("\nUnknown dimension used for coordinate matrix.\n \t !!! Code likely to break in future !!!. Use either flattened internal coordinates or cartesian (Nx3).")
+    end
+    if Vel == nothing
+        Vel = zeros( Coord_shape)
+    end
+    if force == nothing
+        force = zeros( Coord_shape)
+    end
+    if M == nothing
+        M = ones( Coord_shape)
+        print("\n Unit mass issued for all particles/coordinates")
+    elseif isa(M, Real)
+        M = ones( Coord_shape)*abs(M)
+        print("\n Supplied a float for M\n M*Ones(shape(Coords)) used as mass matrix")
+    elseif isa(M, Vector{Float64})
+        print("\n Supplied a Mass Vector")
+        if size(M)[1] == Coord_shape[1]
+            if Coord_shape[2] == 3  
+                print("\n Mass matrix in Cartesian created")  
+                M = hcat(M, M, M)
+            else
+                print("\n !!! Unknown size of Coord !!!\n Reverting to ones of same size as coords")
+                M = ones( Coord_shape)
+            end
+        end
+    else
+        print("!!! Innapropriate Mass Supplied !!!\n \t provide a positive real number or a vector as mass\n creating a mass matrix of same size as Coords")
+        M = ones( Coord_shape)
+    end
+    State0 = SyState(Atoms,Coords,Vel,force,M,Ene,TotE,t)
+    #if Base.method_exists(calculate_forces!, Tuple{SyState})
+    calculate_forces!(State0)
+    #end
+    return State0
+end
 
 """
     System
@@ -45,7 +90,7 @@ Mutable struct containing all system state information.
 - Potenial_func : The potential energy surface
 - Inter_atomic_tag : A tag that determines whether the force and potential functions are inter atomic or global 
 """
-mutable struct System
+mutable struct MD_System
 #   positions::Matrix{Float64}      # N × 3
 #   velocities::Matrix{Float64}     # N × 3
 #   forces::Matrix{Float64}         # N × 3
@@ -59,7 +104,6 @@ mutable struct System
     Potential_func::Function            # Function: vector (Nx3) -> Float
     box_size::Float64               # Scalar
     Inter_atomic_tag::Bool          # true/false
-
 end
 
 """
@@ -68,10 +112,10 @@ end
 Construct a System with initial positions, velocities, masses, and box size.
 Forces are initialized to zero.
 """
-function System(Atoms::Vector{String}, F::Function, V::Function, box_size::Float64, inter_atomic::Bool=true)
+function MD_System(Atoms::Vector{String}, F::Function, V::Function, box_size::Float64, inter_atomic::Bool=true)
     N_atoms = size(Atoms, 1)
-    system = System(Atoms, N_atoms, F, V, box_size, inter_atomic)
-    #calculate_forces!(system)
+    system = MD_System(Atoms, N_atoms, F, V, box_size, inter_atomic)
+    Determine_force(system)
     return system
 end
 

@@ -81,11 +81,11 @@ function stabilize_grid!(n_grid, spacing, params, force_func, potential_func;
     # Create system
     box_size = max(n_grid[1]*spacing[1], n_grid[2]*spacing[2], n_grid[3]*spacing[3])
     # System defnetion  
-    system = System(Atoms, force_func,potential_func,box_size)
+    system = MD_System(Atoms, force_func,potential_func,box_size)
     # State defenitions
     mass_mat = hcat(masses,masses,masses)
     State_init = SyState(Atoms,positions,velocities,velocities*0.0,mass_mat,0.0,0.0,0.0)
-    calculate_forces!(State_init,system)
+    calculate_forces!(State_init)
     dt = 0.05
     println("  Number of particles: $n_particles")
     
@@ -121,7 +121,7 @@ function stabilize_random!(n_particles, box_size, params, force_func, potential_
     end
     
     # Create system
-    system = System(positions, velocities, masses, box_size,force_func,potential_func)
+    system = MD_System(positions, velocities, masses, box_size,force_func,potential_func)
     
     println("  Number of particles: $n_particles")
     
@@ -135,4 +135,39 @@ function stabilize_random!(n_particles, box_size, params, force_func, potential_
     final_positions = system.positions .- com'
     
     return final_positions, trajectory
+end
+
+"""
+    Initialation with zero net momenta
+"""
+function Recenter_and_vel(MD_State, ET)
+    # MD_State: The current state to be modified
+    # ET: Total kinetic energy to be given
+    # This function recenters the given final MD state.
+    # The cenetr of mass (CoM) is kept at the origin.
+    # Velocities are given such that the CoM remain fixed.
+    New_State = deepcopy(MD_State)
+    masses = New_State.M[:,1]
+    N = length(New_State.Atoms)# number of particles
+    com = center_of_mass(New_State)
+    CoM = vcat(com,com,com,com)
+    # Receter geometry
+    New_State.Coords = New_State.Coords - CoM
+    ## Getting velocities for the N-1 particles
+    vel_3 = (rand(N-1,3) .- 0.5)*2.0
+    m_vel_3 = masses[1:N-1]' * vel_3
+    vel_4 = -m_vel_3/masses[N]
+    full_vel = vcat(vel_3,vel_4)
+    KE = 0.5*sum([masses[i]*(full_vel[i,:]'*full_vel[i,:]) for i in 1:N])
+    # scaling velocity to math total energy
+    full_vel = full_vel*(ET/KE)^0.5# scale each velocity by ET/KE
+    New_State.Vel = deepcopy(full_vel)
+    #Moment of inertial test
+    Ang_M = 0.0
+    for i in 1:N
+        Ang_M += masses[i]*norm(cross(New_State.Coords[i,:],full_vel[i,:]))
+    end
+    KE = 0.5*sum([masses[i]*(full_vel[i,:]'*full_vel[i,:]) for i in 1:N])
+    print("Recentering Done:\n\t Total KE:$KE \t Angular Momentum: $Ang_M")
+    return New_State
 end

@@ -13,7 +13,7 @@ Perform one velocity Verlet integration step.
 2. Calculate new forces F(t+dt)
 3. Update velocities: v(t+dt) = v(t) + 0.5*[F(t)+F(t+dt)]/m*dt
 """
-function velocity_verlet!(state::SyState, system::System, dt::Float64)
+function velocity_verlet!(state::SyState, system::MD_System, dt::Float64)
     n = system.N_atoms
     
     # Save old forces
@@ -24,7 +24,7 @@ function velocity_verlet!(state::SyState, system::System, dt::Float64)
     Mass_matrix = state.M
     state.Coords .+= state.Vel * dt .+ 0.5 * old_forces ./ Mass_matrix * dt^2
     # Calculate new forces
-    calculate_forces!(state, system)
+    calculate_forces!(state)
     # Update velocities using average force
     avg_f = 0.5 * (old_forces+ state.force)
     state.Vel .+= avg_f ./ Mass_matrix * dt
@@ -45,7 +45,7 @@ Apply boundary conditions to system.
 - `:periodic`: Periodic boundary conditions
 - `:none`: No boundaries
 """
-function apply_boundary_conditions!(State::SyState,system::System, boundary_type=:reflective)
+function apply_boundary_conditions!(State::SyState,system::MD_System, boundary_type=:reflective)
     if boundary_type == :none
         return nothing
     end
@@ -90,7 +90,7 @@ Run a full MD simulation.
 
 Returns: (trajectory, energies, temperatures, potential_energies)
 """
-function run_simulation!(Initial_state::SyState,system::System, params::SimulationParams;
+function run_simulation!(Initial_state::SyState,system::MD_System, params::SimulationParams;
                         boundary_type=:reflective, verbose=true)
     
     n_particles = system.N_atoms#size(Initial_state.Coords, 1)
@@ -104,15 +104,13 @@ function run_simulation!(Initial_state::SyState,system::System, params::Simulati
     Simulation_state = deepcopy(Initial_state)
 
     if verbose
-        println("Running MD simulation")
-        println("  Particles: $n_particles")
-        println("  Steps: $(params.n_steps)")
-        println("  dt: $(params.dt)")
-        println("  Output frequency: $(params.output_freq)")
+        println("\n=============== Running MD simulation ===============")
+        println("\t Particles: $n_particles \t Steps: $(params.n_steps)")
+        println("\t dt: $(params.dt) \t Output frequency: $(params.output_freq)")
     end
     
     # Initial force calculation
-    calculate_forces!(Simulation_state, system)
+    calculate_forces!(Simulation_state)
     
     save_idx = 1
     
@@ -153,7 +151,7 @@ end
 Run damped dynamics for geometry optimization.
 Velocity is set to zero when power becomes negative.
 """
-function run_damped_optimization!(Initial_state::SyState,system::System, params::SimulationParams;verbose=true, tol=1e-12)
+function run_damped_optimization!(Initial_state::SyState,system::MD_System, params::SimulationParams;verbose=true, tol=1e-12)
     
     n_particles = system.N_atoms#size(Initial_state.Coords, 1)
     n_save = Int(ceil(params.n_steps/params.output_freq) +1)
@@ -166,15 +164,13 @@ function run_damped_optimization!(Initial_state::SyState,system::System, params:
     Simulation_state = deepcopy(Initial_state)
 
     if verbose
-        println("Running MD simulation")
-        println("  Particles: $n_particles")
-        println("  Steps: $(params.n_steps)")
-        println("  dt: $(params.dt)")
-        println("  Output frequency: $(params.output_freq)")
+        println("\n=============== Running Damped Optimization ============")
+        println("\t Particles: $n_particles \t Steps: $(params.n_steps)")
+        println("\t dt: $(params.dt) \t Output frequency: $(params.output_freq)")
     end
     
     # Initial force calculation
-    calculate_forces!(Simulation_state, system)
+    calculate_forces!(Simulation_state)
     ## Zeroth step
     save_idx = 1
     trajectory_xyz[save_idx, :, :] = Simulation_state.Coords
@@ -222,7 +218,7 @@ function run_damped_optimization!(Initial_state::SyState,system::System, params:
     return trajectory, Simulation_state 
 end
 
-function run_damped_optimization_FIRE!(Initial_state::SyState,system::System, params::SimulationParams, Fire_params::FIRE_params; 
+function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System, params::SimulationParams, Fire_params::FIRE_params; 
                                  verbose=true, tol=1e-12)
     
     n_particles = system.N_atoms#size(system.positions, 1)
@@ -237,16 +233,20 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::System, pa
     Simulation_state = deepcopy(Initial_state)
 
     if verbose
-        println("Running damped optimization")
-        println("  Particles: $n_particles")
-        println("  Max steps: $(params.n_steps)")
+        println("\n=============== Running Damped Optimization (FIRE) ============")
+        println("\t Particles: $n_particles \t Steps: $(params.n_steps)")
+        println("\t dt: $(params.dt) \t Output frequency: $(params.output_freq)")
+        println("\t --- FIRE PARAMS ---")
+        println("\t\t dt: $(Fire_params.dt) \t  a: $(Fire_params.a)")
+        println("\t\t ddt: $(Fire_params.ddt) \t da: $(Fire_params.da)")
+        println("\t\t dt_max: $(Fire_params.dt_max) \t a_min: $(Fire_params.a_min)")
     end
     
     if params.dt != Fire_params.dt
         print("dt from FIRE params different from that in simulation params\n using dt dt from FIRE params")
     end
     # Initial force calculation
-    calculate_forces!(Simulation_state, system)
+    calculate_forces!(Simulation_state)
     ##
     save_idx = 1
     trajectory_xyz[save_idx, :, :] = Simulation_state.Coords

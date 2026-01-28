@@ -65,14 +65,14 @@ end
 
 Calculate radius of gyration: R_g² = Σ m_i |r_i - R_COM|² / Σ m_i
 """
-function radius_of_gyration(system::System)
-    com = center_of_mass(system)
-    total_mass = sum(system.masses)
+function radius_of_gyration(State::SyState)
+    com = center_of_mass(State)
+    total_mass = sum(State.M[:,1])
     rg_sq = 0.0
     
     for i in 1:size(system.positions, 1)
-        r_rel = system.positions[i, :] - com
-        rg_sq += system.masses[i] * sum(r_rel.^2)
+        r_rel = State.Coords[i, :] - com
+        rg_sq += State.M[i,1] * sum(r_rel.^2)
     end
     
     return sqrt(rg_sq / total_mass)
@@ -83,7 +83,7 @@ end
 
 Calculate mean distance between all pairs of particles.
 """
-function mean_interparticle_distance(system::System)
+function mean_interparticle_distance(system::MD_System)
     n = size(system.positions, 1)
     distances = Float64[]
     

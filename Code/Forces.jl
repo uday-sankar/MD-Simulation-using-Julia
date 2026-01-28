@@ -13,37 +13,78 @@ Also updates system.potential_energy.
 - `force_func`: Function f(r_vec) returning force vector
 - `potential_func`: Function V(r_vec) returning potential energy
 """
-function calculate_forces!(State::SyState,system::System)
-    n = size(State.Coords, 1)
+#calculate_forces!(State::SyState,system::System) = 0.0
+
+function Determine_force(system::MD_System)
     force_func, potential_func = system.Force_func, system.Potential_func
     if system.Inter_atomic_tag # if inter atomic potentials are delivered
-        # Zero out forces
-        fill!(State.force, 0.0)
-        State.Ene = 0.0
-        # Pairwise interactions
-        for i in 1:n-1
-            for j in i+1:n
-                r_vec = State.Coords[i, :] - State.Coords[j, :]
+        function Inter_atom_force!(State::SyState)
+            n = size(State.Coords, 1)
+            # Zero out forces
+            fill!(State.force, 0.0)
+            State.Ene = 0.0
+            # Pairwise interactions
+            for i in 1:n-1
+                for j in i+1:n
+                    r_vec = State.Coords[i, :] - State.Coords[j, :]
 
-                # Calculate force and potential
-                force = force_func(r_vec)
-                potential = potential_func(r_vec)
+                    # Calculate force and potential
+                    force = force_func(r_vec)
+                    potential = potential_func(r_vec)
 
-                # Newton's third law
-                State.force[i, :] .+= force
-                State.force[j, :] .-= force
+                    # Newton's third law
+                    State.force[i, :] .+= force
+                    State.force[j, :] .-= force
 
-                # Accumulate potential energy
-                State.Ene += potential
+                    # Accumulate potential energy
+                    State.Ene += potential
+                end
             end
+            State.TotE = 0.5*sum(State.M .* State.Vel.^2) + State.Ene
         end
+        global calculate_forces! = Inter_atom_force!
     else # if global Forces are given
-        State.force = deepcopy(force_func(State.Coords))
-        State.Ene = potential_func(State.Coords)
+        function Global_f!(State::SyState)
+            State.force = deepcopy(force_func(State.Coords))
+            State.Ene = potential_func(State.Coords)
+            State.TotE = 0.5*sum(State.M .* State.Vel.^2) + State.Ene
+        end
+        global calculate_forces! = Global_f!
     end
-    State.TotE = 0.5*sum(State.M .* State.Vel.^2) + State.Ene
     return nothing
 end
+
+#function calculate_forces!(State::SyState,system::System)
+#    n = size(State.Coords, 1)
+#    force_func, potential_func = system.Force_func, system.Potential_func
+#    if system.Inter_atomic_tag # if inter atomic potentials are delivered
+#        # Zero out forces
+#        fill!(State.force, 0.0)
+#        State.Ene = 0.0
+#        # Pairwise interactions
+#        for i in 1:n-1
+#            for j in i+1:n
+#                r_vec = State.Coords[i, :] - State.Coords[j, :]
+#
+#                # Calculate force and potential
+#                force = force_func(r_vec)
+#                potential = potential_func(r_vec)
+#
+#                # Newton's third law
+#                State.force[i, :] .+= force
+#                State.force[j, :] .-= force
+#
+#                # Accumulate potential energy
+#                State.Ene += potential
+#            end
+#        end
+#    else # if global Forces are given
+#        State.force = deepcopy(force_func(State.Coords))
+#        State.Ene = potential_func(State.Coords)
+#    end
+#    State.TotE = 0.5*sum(State.M .* State.Vel.^2) + State.Ene
+#    return nothing
+#end
 
 """
     harmonic_potential(r_vec; k=1.0, r_eq=2.0)

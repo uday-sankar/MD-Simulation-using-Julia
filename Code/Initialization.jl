@@ -150,7 +150,7 @@ function Recenter_and_vel(MD_State, ET)
     masses = New_State.M[:,1]
     N = length(New_State.Atoms)# number of particles
     com = center_of_mass(New_State)
-    CoM = vcat(com,com,com,com)
+    CoM = repeat(com,N)
     # Receter geometry
     New_State.Coords = New_State.Coords - CoM
     ## Getting velocities for the N-1 particles

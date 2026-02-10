@@ -36,7 +36,7 @@ opt_trajectory, opt_State = run_damped_optimization_FIRE!(State_init,
 write_trajectory(opt_trajectory, "$Out_put_fold/LJ_stab.xyz")
 ##
 try
-    animate_trajectory(opt_trajectory, filename="$Out_put_fold/LJ_stab.mp4", 
+    animate_trajectory(opt_trajectory, filename="$Out_put_fold/LJ_stab.gif", 
                       box_size=params.boundary_size, frames=100)
 catch e
     println("Visualization skipped (Plots.jl may not be available)")
@@ -52,10 +52,11 @@ println("  Energy drift: $(abs(energies[end] - energies[1]))")
 println("  Mean temperature: $(sum(T)/length(T))")
 ## MD Run
 # Assiging velocity
-ET = 10.0#Total kinetic energy to be distributed as K.E.
+ET = 20.0#Total kinetic energy to be distributed as K.E.
 New_MD_state = Recenter_and_vel(opt_State,ET)
 ##
-z_vel = repeat([0.0,0.0,-4.0]',num_part,1)
+z_vel = repeat([0.0,0.0,-3.5]',num_part,1)
+New_MD_state.Coords = New_MD_state.Coords - repeat([0.0,0.0, 10.0]',num_part,1)
 New_MD_state.Vel = New_MD_state.Vel + z_vel
 params = SimulationParams(n_steps=N_steps*2.0,dt=dt,output_freq=out_freq, boundary_size=box_size)
 trajectory_MD_run, Final_State_MD = run_simulation!(New_MD_state,
@@ -69,5 +70,5 @@ write_trajectory(trajectory_MD_run, "$Out_put_fold/LJ_MD_run.xyz")
 t_end = Final_State_MD.t
 Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,fold=Out_put_fold,window_smooth=40,plt_tot_E=true)
 ##
-animate_trajectory(trajectory_MD_run, filename="$Out_put_fold/LJ_MD_run.mp4", 
+animate_trajectory(trajectory_MD_run, filename="$Out_put_fold/LJ_MD_run.gif", 
                       box_size=params.boundary_size, frames=200)

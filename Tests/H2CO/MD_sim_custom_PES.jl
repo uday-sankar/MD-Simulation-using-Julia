@@ -5,10 +5,10 @@ using Statistics
 using LinearAlgebra
 #using Unitful
 
-include("./Code/MD_Base.jl") # Base code
+include("../../Base_code/Code/MD_Base.jl") # Base code
 using .MD_Base
 ##
-include("./FORTRAN_Test_PES/H2CO_triplet.jl")# custom force for H2CO system
+include("../../Base_code/FORTRAN_Test_PES/H2CO_triplet.jl")# custom force for H2CO system
 ##
 # =============================================================================
 fold = "./" # Path to Current folder (or the folder to keep all the information)

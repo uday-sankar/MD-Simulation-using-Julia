@@ -7,10 +7,10 @@ using LinearAlgebra
 include("Code/MD_Base.jl")
 using .MD_Base
 ##
-include("/Users/upm5017/Documents/Work/FORTRAN_Julia/Working files/H2CO_triplet.jl")
+include("./FORTRAN_Test_PES/H2CO_triplet.jl")
 ##
 # =============================================================================
-fold = "/Users/upm5017/Documents/Work/MD_sim/Testing/Version 5: Molecules Implem"
+fold = "./"
 # Define force and potential functions
 function V(xyz::Matrix{Float64})
     return ch2o_pes(xyz)

@@ -71,8 +71,6 @@ write_enhanced_trajectory(trajectory, "$fold/H2CO_FIRE_stab_detailed.xyz",
 try
     animate_trajectory(trajectory, filename="$fold/H2CO_FIRE_stab.mp4", 
                       box_size=params.boundary_size, frames=50)
-    plot_snapshots(trajectory, [1, :mid, :end], 
-                  filename="$fold/H2CO_stab_snapshot.png")
 catch e
     println("Visualization skipped (Plots.jl may not be available)")
 end
@@ -82,7 +80,7 @@ T = trajectory.Temperature
 PE = trajectory.PE
 ##
 t_end = Final_State.t
-Plot_data(trajectory,0:dt:t_end+dt; smooth_flag=false,filename="$fold/H2CO_stab_data.png",window_smooth=40,plt_tot_E=false)
+Plot_data(trajectory,0:dt:t_end+dt; smooth_flag=false,fold=fold,window_smooth=40,plt_tot_E=false)
 ##
 println("\nFinal Statistics:")
 println("  Energy drift: $(abs(energies[end] - energies[1]))")
@@ -105,6 +103,5 @@ trajectory_MD_run, Final_State_MD = run_simulation!(New_MD_state,
 )
 write_trajectory(trajectory_MD_run, "$fold/H2CO_MD_run.xyz")
 
-t_end = Final_State_MD.t
 
 Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,filename="$fold/MD_run_data.png",window_smooth=40,plt_tot_E=true)

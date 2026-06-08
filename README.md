@@ -28,6 +28,8 @@ Limitations:
 * No Thermostats, No PBC
 * No explicit parallelization (The MD steps are vectorized natively in Julia (but not parallelized using MPI))
 
+<img width="798" height="800" alt="maze_animation" src="https://github.com/user-attachments/assets/531261fe-9ad8-4055-baed-a0283c7cb8f0" />
+
 References
 
 1: The sample H2CO PES was obtained from the chempotpy library, which used a PIP-NN from another publication:
@@ -36,3 +38,4 @@ Li, Jun, Changjian Xie, and Hua Guo. “Kinetics and dynamics of the C (3 P)+ H 
 
 2: Chempotpy: https://pubs.acs.org/doi/full/10.1021/acs.jpca.3c05Shu,
 Yinan, Zoltan Varga, Dayou Zhang, and Donald G. Truhlar. “ChemPotPy: A Python Library for Analytic Representations of Potential Energy Surfaces and Diabatic Potential Energy Matrices.” The Journal of Physical Chemistry A 127, no. 45 (2023): 9635-9640.899.
+

@@ -4,6 +4,7 @@ A simple molecular dynamics simulation code written in `Julia`.
 
 **Files:**
 * **MD_sim.jl** : A sample MD code with LJ Potential
+<img width="600" height="400" alt="LJ_MD_run" src="https://github.com/user-attachments/assets/0f917daf-90f4-412e-9541-b0ae3b5b7815" />
 
 * **MD_sim_custom_PES.jl**: A sample code that works to use a custom PES. Here, it uses a `FORTRAN` PES for formaldehyde $^{1,2}$. I have integrated the `FORTRAN` code with Julia to call the function using a shared library.
 

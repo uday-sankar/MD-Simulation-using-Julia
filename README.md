@@ -7,11 +7,11 @@ A simple molecular dynamics simulation code written in `Julia`.
 
 * **MD_sim_custom_PES.jl**: A sample code that works to use a custom PES. Here, it uses a `FORTRAN` PES for formaldehyde $^{1,2}$. I have integrated the `FORTRAN` code with Julia to call the function using a shared library.
 
-Sample animation for an LJ cluster:
+* **Code/** : Conatins all the back-end codes.
+ 
+**Sample animation** for an LJ cluster:
 
 <img width="600" height="400" alt="LJ_MD_run" src="https://github.com/user-attachments/assets/0f917daf-90f4-412e-9541-b0ae3b5b7815" />
-
-* **Code/** : Conatins all the back-end codes.
 
 The code defines three main object types (implemented in `types.jl`):
 

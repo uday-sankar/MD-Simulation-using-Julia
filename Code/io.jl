@@ -11,21 +11,22 @@ Expects format: atom_id  x  y  z
 Returns: positions (N×3 matrix)
 """
 function read_xyz(filename::String)
-    positions = []
-    
+    atoms = String[]
+    positions = Vector{Float64}[]
+
     open(filename, "r") do f
-        for line in eachline(f)
-            columns = split(line)
-            if length(columns) >= 4
-                x = parse(Float64, columns[2])
-                y = parse(Float64, columns[3])
-                z = parse(Float64, columns[4])
-                push!(positions, [x, y, z])
-            end
+        lines = readlines(f)
+        natoms = parse(Int, strip(lines[1]))
+        # lines[2] is the comment line, skip it
+        for i in 3:(2 + natoms)
+            columns = split(lines[i])
+            push!(atoms, columns[1])
+            push!(positions, parse.(Float64, columns[2:4]))
         end
     end
-    
-    return hcat(positions...)' |> Matrix{Float64}
+
+    positions_matrix = hcat(positions...)' |> Matrix{Float64}
+    return atoms, positions_matrix
 end
 
 """

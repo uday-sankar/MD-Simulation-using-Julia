@@ -51,7 +51,7 @@ module MD_Base
 
     # Include all submodules
     include("types.jl")
-    include("forces.jl")
+    include("Forces.jl")
     include("Integrators.jl")
     include("Initialization.jl")
     include("Analysis.jl")

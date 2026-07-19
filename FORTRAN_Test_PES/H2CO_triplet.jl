@@ -1,6 +1,6 @@
 # Get_PES_test.jl - ALL POINTERS VERSION
-const LIBCH2O = "/Users/upm5017/Documents/Work/FORTRAN_Julia/Working files/libch2o_pes.so" # location of the compiled (as a shared library) fortran code
-const PES_PATH = "/Users/upm5017/Documents/Work/FORTRAN_Julia/Working files" # location of the current folder
+const LIBCH2O = "../../FORTRAN_Test_PES/CH2O_PIPNN_GNU_x86.so" # location of the compiled (as a shared library) fortran code
+const PES_PATH = "../../FORTRAN_Test_PES/" # location of the current folder
 
 function ch2o_pes(x::Matrix{Float64})
     @assert size(x) == (4, 3) "Input must be 4×3 (H1,H2,C,O × x,y,z)"

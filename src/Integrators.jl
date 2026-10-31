@@ -130,7 +130,7 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
             temperatures[save_idx] = temperature(Simulation_state)
             potential_energies[save_idx] = Simulation_state.Ene
             
-            if verbose && (save_idx % 10 == 0 || save_idx == 1)
+            if verbose
                 @printf("Step %6d: E = %12.6f, T = %12.6f, PE = %12.6f\n",
                        step, energies[save_idx], temperatures[save_idx], 
                        potential_energies[save_idx])

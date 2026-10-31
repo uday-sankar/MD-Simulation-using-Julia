@@ -69,6 +69,7 @@ dt = 0.001
 ##
 z_vel = repeat([0.0,0.0,-1.0]',num_part,1)
 New_MD_state.Vel = New_MD_state.Vel +  z_vel
+out_freq = 10
 #print(New_MD_state.Vel)
 params = MD_Base.SimulationParams(n_steps=N_steps,dt=dt,output_freq=out_freq)
 trajectory_MD_run, Final_State_MD = MD_Base.run_simulation!(New_MD_state,

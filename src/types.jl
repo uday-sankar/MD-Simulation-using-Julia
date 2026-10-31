@@ -145,18 +145,29 @@ struct SimulationParams
     n_steps::Int 
     dt::Float64
     output_freq::Int 
-    boundary_size::Float64
-    function SimulationParams(;n_steps = 100, dt=0.1, output_freq = 5, boundary_size = 10)
-        new(n_steps,dt,output_freq,boundary_size)
+    #boundary_size::Float64
+    function SimulationParams(;n_steps = 100, dt=0.1, output_freq = 5)
+        new(n_steps,dt,output_freq)
     end
 end
 
+mutable struct MD_state
+    Coords::Matrix{Float64}     # N x 3
+    Vel::Matrix{Float64}        # N × 3
+    force::Matrix{Float64}
+    t::Float64  # T 
+    Tot_Energy::Float64   # T x 1
+    Temperature::Float64  # T x 1
+    V::Float64  # T x 1
+end
+
 mutable struct Trajectory
+    Atoms::Vector{String}
     Trajectory_coords::Array{Float64,3}   # T x N x 3
+    Time::Array{Float64,1}  # T x 1
     Tot_Energy::Array{Float64,1}   # T x 1
     Temperature::Array{Float64,1}  # T x 1
     PE::Array{Float64,1}  # T x 1
-    Atoms::Vector{String}
 end
 
 mutable struct FIRE_params
@@ -165,9 +176,11 @@ mutable struct FIRE_params
     da::Float64
     a_min::Float64
     dt::Float64
-    ddt::Float64
+    ddt_inc::Float64
+    ddt_dec::Float64
+    dt_min::Float64
     dt_max::Float64
-    function FIRE_params(;a0=1.0,a=1.0,da=0.01,a_min=0.1,dt=0.1,ddt=0.01,dt_max=0.1)
-        new(a0,a,da,a_min,dt,ddt,dt_max)
+    function FIRE_params(;a0=0.1,a=0.1,da=0.9,a_min=1e-4,dt=0.1,dt_min=1e-5,ddt_inc=1.1,ddt_dec=0.5,dt_max=0.1)
+        new(a0,a,da,a_min,dt,dt_min,ddt_inc,ddt_dec,dt_max)
     end
 end

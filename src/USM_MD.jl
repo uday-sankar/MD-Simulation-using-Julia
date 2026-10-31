@@ -17,7 +17,7 @@
 # File: src/MDSimulation.jl (Main module file)
 # =============================================================================
 
-module MD_Base
+module USM_MD
     using Plots  
     using LinearAlgebra
     using Printf

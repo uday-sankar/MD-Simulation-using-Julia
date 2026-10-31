@@ -111,7 +111,7 @@ function write_trajectory(trajectory::Trajectory, filename::String)
             write(f, "$n_atoms\n")
             
             # Write comment line
-            Line2 = @sprintf("%12.6f\n", trajectory.PE[frame])
+            Line2 = @sprintf("%12.6f\t FRAME #: %5f\n", trajectory.PE[frame], frame)
             write(f, Line2)
             
             # Write coordinates

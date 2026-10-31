@@ -314,52 +314,115 @@ function smooth_boxcar(x, window)
     return out
 end
 ##
-function Plot_data(trajectory, Time; smooth_flag=true, fold=".",window_smooth=50, plt_tot_E=true)
-    window = window_smooth#10
+function Plot_data(trajectory, Time;
+                   smooth_flag=true,
+                   fold=".",
+                   window_smooth=50,
+                   plt_tot_E=true)
+
+    T       = trajectory.Temperature
     E_total = trajectory.Tot_Energy
-    T = trajectory.Temperature
-    PE = trajectory.PE
+    PE      = trajectory.PE
+
+    # Validate input lengths
+    length(Time) == length(T) ||
+        throw(DimensionMismatch("Time and Temperature lengths differ"))
+
+    length(Time) == length(PE) ||
+        throw(DimensionMismatch("Time and Potential Energy lengths differ"))
+
+    if plt_tot_E && length(Time) != length(E_total)
+        throw(DimensionMismatch("Time and Total Energy lengths differ"))
+    end
+
+    # Smooth data if requested
     if smooth_flag
-        T_smooth       = smooth_boxcar(T, window)
-        E_total_smooth = smooth_boxcar(E_total, window)
-        PE_smooth      = smooth_boxcar(PE, window)
+        window_smooth > 0 ||
+            throw(ArgumentError("window_smooth must be positive"))
+
+        T_plot  = smooth_boxcar(T, window_smooth)
+        PE_plot = smooth_boxcar(PE, window_smooth)
+
+        E_plot = plt_tot_E ?
+            smooth_boxcar(E_total, window_smooth) : nothing
     else
-        T_smooth       = copy(T)
-        E_total_smooth = copy(E_total)
-        PE_smooth      = copy(PE)
+        T_plot  = T
+        PE_plot = PE
+        E_plot  = plt_tot_E ? E_total : nothing
     end
 
-    # 2-row layout: top = Temperature, bottom = energies
-    p = plot(layout = (2, 1),
-             size = (800, 800), dpi = 300,
-             fontfamily = "Arial", grid = true, gridalpha = 0.3,
-             title = "MD Simulation: Thermodynamic Quantities")
+    # Choose the number of panels
+    n_panels = plt_tot_E ? 3 : 2
 
-    # --- Panel 1: Temperature ---
-    
-        plot!(p[1], Time, T_smooth,
-              color = :red, linewidth = 2.5, label = "Temperature (K)",
-              xlabel = "Time (ps)", ylabel = "Temperature (K)",
-              legend = :topright)
+    p = plot(
+        layout = (n_panels, 1),
+        size = (800, 800),
+        dpi = 300,
+        fontfamily = "Arial",
+        grid = true,
+        gridalpha = 0.3,
+        title = "MD Simulation: Thermodynamic Quantities"
+    )
+
+    # Panel 1: Temperature
+    plot!(
+        p[1], Time, T_plot,
+        color = :red,
+        linewidth = 2.5,
+        label = "Temperature",
+        xlabel = "Time (ps)",
+        ylabel = "Temperature (K)",
+        legend = :topright
+    )
+
     if plt_tot_E
-        plot!(p[2], Time, E_total_smooth,
-          color = :blue, linewidth = 2.5, linestyle = :solid,
-          label = "Total Energy")
-    end
-    # --- Panel 2: Energies (same axis) ---
-    plot!(p[2], Time, PE_smooth,
-          color = :green, linewidth = 2.5, linestyle = :dash,
-          label = "Potential Energy",
-          xlabel = "Time (ps)", ylabel = "Energy (kJ/mol)")
+        # Panel 2: Total energy
+        plot!(
+            p[2], Time, E_plot,
+            color = :blue,
+            linewidth = 2.5,
+            linestyle = :solid,
+            label = "Total Energy",
+            xlabel = "Time (ps)",
+            ylabel = "Energy"
+        )
 
-    # Margins and saving
+        # Panel 3: Potential energy
+        plot!(
+            p[3], Time, PE_plot,
+            color = :green,
+            linewidth = 2.5,
+            linestyle = :dash,
+            label = "Potential Energy",
+            xlabel = "Time (ps)",
+            ylabel = "Energy "
+        )
+    else
+        # Panel 2: Potential energy
+        plot!(
+            p[2], Time, PE_plot,
+            color = :green,
+            linewidth = 2.5,
+            linestyle = :dash,
+            label = "Potential Energy",
+            xlabel = "Time (ps)",
+            ylabel = "Energy "
+        )
+    end
+
+    # Create output directory and save
+    mkpath(fold)
+
     plot!(p, right_margin = 5Plots.mm)
-    savefig(p, "$fold/MD_plot.pdf")
-    savefig(p, "$fold/MD_plot.png")
+
+    savefig(p, joinpath(fold, "MD_plot.pdf"))
+    savefig(p, joinpath(fold, "MD_plot.png"))
 
     display(p)
+
     return p
 end
+
 #else
 #    # Provide stub functions if Plots is not available
 #    function plot_frame(args...; kwargs...)

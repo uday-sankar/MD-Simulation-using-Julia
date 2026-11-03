@@ -10,7 +10,8 @@ if !isdir(Out_put_fold)
 end
 ##
 # getting positions and veclocities 
-pos, vel = MD_Base.grid_initialize([6,6,6],[5.0,5.0,5.0]) # 5 particles along x,y,z with seperation of 4.0
+# A grid based initlization of particles in a box with given dimensions and spacing
+pos, vel = MD_Base.grid_initialize([4,4,4],[5.0,5.0,5.0]) # 4 particles along x,y,z with seperation of 2.0
 num_part = size(pos,1)
 Atoms = ["Au" for i in 1:num_part]
 mass = ones(num_part)
@@ -56,7 +57,7 @@ println("  Energy drift: $(abs(energies[end] - energies[1]))")
 println("  Mean temperature: $(sum(T)/length(T))")
 ## MD Run
 # Assiging velocity
-ET = 200.0#Total kinetic energy to be distributed as K.E.
+ET = 100.0#Total kinetic energy to be distributed as K.E.
 New_MD_state = MD_Base.Recenter_and_vel(opt_State,ET)
 ##
 Out_put_fold = "MD"
@@ -65,9 +66,9 @@ if !isdir(Out_put_fold)
 end
 ##
 N_steps = 40000
-dt = 0.001
+dt = 0.0005
 ##
-z_vel = repeat([0.0,0.0,-1.0]',num_part,1)
+z_vel = repeat([0.0,0.0,-2.0]',num_part,1)
 New_MD_state.Vel = New_MD_state.Vel +  z_vel
 out_freq = 10
 #print(New_MD_state.Vel)

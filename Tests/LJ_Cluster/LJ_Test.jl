@@ -1,74 +1,87 @@
 using Plots  # ]add Plots if needed
 gr()         # Use GR backend for high-quality output # Optional, for visualization
-using Statistics
-using LinearAlgebra
+import USM_MD as MD_Base
+#using Statistics
+#using LinearAlgebra
 ##
-include("../../Code/MD_Base.jl")
-using .MD_Base
+Out_put_fold = "Minimize"
+if !isdir(Out_put_fold)
+    mkdir(Out_put_fold)
+end
 ##
-Out_put_fold = "./"
-##
-# getting positions and veclocities
-pos, vel = grid_initialize([6,6,6],[5.0,5.0,5.0]) # 5 particles along x,y,z with seperation of 4.0
+# getting positions and veclocities 
+pos, vel = MD_Base.grid_initialize([6,6,6],[5.0,5.0,5.0]) # 5 particles along x,y,z with seperation of 4.0
 num_part = size(pos,1)
 Atoms = ["Au" for i in 1:num_part]
 mass = ones(num_part)
 ## 
 F(xyz) = MD_Base.lennard_jones_force(xyz; epsilon=2.0, sigma = 3.5, cutoff = Inf)
 V(xyz) = MD_Base.lennard_jones_potential(xyz; epsilon=2.0, sigma = 3.5, cutoff = Inf)
-box_size = 25.0
-system = MD_System(Atoms,F,V,box_size,true)
+box_size = 15.0
+system = MD_Base.MD_System(Atoms,F,V,box_size,true)
 ##
-State_init = SyState(Atoms, pos; Vel=vel, force = vel*0.0,M=mass)
+State_init = MD_Base.SyState(Atoms, pos; Vel=vel, force = vel*0.0,M=mass)
 ##
-dt = 0.01
+dt = 0.1
 out_freq = 1
 N_steps = 2000
-params = SimulationParams(n_steps=N_steps,dt=dt,output_freq=out_freq, boundary_size=box_size)
+params = MD_Base.SimulationParams(n_steps=N_steps,dt=dt,output_freq=out_freq)
 ##
-a, da = 1.0, 0.05
-fire_params = FIRE_params(dt=dt,ddt=dt/10.0,da=da,a=a)
+a, da = 0.5, 0.9
+fire_params = MD_Base.FIRE_params(dt=dt,ddt_inc=1.1,ddt_dec=0.5,da=da,a=a,a0=0.5,dt_min=0.001)
 ##
-opt_trajectory, opt_State = run_damped_optimization_FIRE!(State_init,
+opt_trajectory, opt_State = MD_Base.run_damped_optimization_FIRE!(State_init,
     system, params, fire_params;
     verbose = true, tol=1e-4)
 ## Save results
-write_trajectory(opt_trajectory, "$Out_put_fold/LJ_stab.xyz")
+MD_Base.write_trajectory(opt_trajectory, "$Out_put_fold/LJ_stab.xyz")
 ##
-try
-    animate_trajectory(opt_trajectory, filename="$Out_put_fold/LJ_stab.gif", 
-                      box_size=params.boundary_size, frames=100)
-catch e
-    println("Visualization skipped (Plots.jl may not be available)")
-end
+#try
+MD_Base.animate_trajectory(opt_trajectory, filename="$Out_put_fold/LJ_stab.mp4", box_size=system.box_size, frames=100)
+#catch e
+#    println("Visualization skipped (Plots.jl may not be available)")
+#end
 ##
 energies = opt_trajectory.Tot_Energy
 T = opt_trajectory.Temperature
 PE = opt_trajectory.PE
 t_end = opt_State.t
-Plot_data(opt_trajectory,0:dt:t_end; smooth_flag=false,fold=Out_put_fold,window_smooth=40,plt_tot_E=false)
+##
+#print("Temp Len: ",length(T))
+#print("Time Len: ",length(0:dt:t_end+dt))
+#
+MD_Base.Plot_data(opt_trajectory,opt_trajectory.Time; smooth_flag=false,fold=Out_put_fold,window_smooth=40,plt_tot_E=false)
 println("\nFinal Statistics:")
 println("  Energy drift: $(abs(energies[end] - energies[1]))")
 println("  Mean temperature: $(sum(T)/length(T))")
 ## MD Run
 # Assiging velocity
-ET = 20.0#Total kinetic energy to be distributed as K.E.
-New_MD_state = Recenter_and_vel(opt_State,ET)
+ET = 200.0#Total kinetic energy to be distributed as K.E.
+New_MD_state = MD_Base.Recenter_and_vel(opt_State,ET)
 ##
-z_vel = repeat([0.0,0.0,-3.5]',num_part,1)
-New_MD_state.Coords = New_MD_state.Coords - repeat([0.0,0.0, 10.0]',num_part,1)
-New_MD_state.Vel = New_MD_state.Vel + z_vel
-params = SimulationParams(n_steps=N_steps*2.0,dt=dt,output_freq=out_freq, boundary_size=box_size)
-trajectory_MD_run, Final_State_MD = run_simulation!(New_MD_state,
+Out_put_fold = "MD"
+if !isdir(Out_put_fold)
+    mkdir(Out_put_fold)
+end
+##
+N_steps = 40000
+dt = 0.001
+##
+z_vel = repeat([0.0,0.0,-1.0]',num_part,1)
+New_MD_state.Vel = New_MD_state.Vel +  z_vel
+out_freq = 10
+#print(New_MD_state.Vel)
+params = MD_Base.SimulationParams(n_steps=N_steps,dt=dt,output_freq=out_freq)
+trajectory_MD_run, Final_State_MD = MD_Base.run_simulation!(New_MD_state,
     system, params,
     boundary_type = :reflective,
     verbose = true
 )
 ##
-write_trajectory(trajectory_MD_run, "$Out_put_fold/LJ_MD_run.xyz")
+MD_Base.write_trajectory(trajectory_MD_run, "$Out_put_fold/LJ_MD_run.xyz")
 ##
 t_end = Final_State_MD.t
-Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,fold=Out_put_fold,window_smooth=40,plt_tot_E=true)
+MD_Base.Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,fold=Out_put_fold,window_smooth=40,plt_tot_E=true)
 ##
-animate_trajectory(trajectory_MD_run, filename="$Out_put_fold/LJ_MD_run.gif", 
-                      box_size=params.boundary_size, frames=200)
+MD_Base.animate_trajectory(trajectory_MD_run, filename="$Out_put_fold/LJ_MD_run.mp4", 
+                      box_size=system.box_size, frames=400)

@@ -17,7 +17,7 @@
 # File: src/MDSimulation.jl (Main module file)
 # =============================================================================
 
-module MD_Base
+module USM_MD
     using Plots  
     using LinearAlgebra
     using Printf
@@ -51,7 +51,7 @@ module MD_Base
 
     # Include all submodules
     include("types.jl")
-    include("forces.jl")
+    include("Forces.jl")
     include("Integrators.jl")
     include("Initialization.jl")
     include("Analysis.jl")

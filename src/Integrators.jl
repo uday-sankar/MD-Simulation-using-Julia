@@ -22,12 +22,12 @@ function velocity_verlet!(state::SyState, system::MD_System, dt::Float64)
     # Update positions
     ## Vectorized code
     Mass_matrix = state.M
-    state.Coords .+= state.Vel * dt .+ 0.5 * old_forces ./ Mass_matrix * dt^2
+    state.Coords += state.Vel * dt + 0.5 * old_forces ./ Mass_matrix * dt^2
     # Calculate new forces
     calculate_forces!(state)
     # Update velocities using average force
     avg_f = 0.5 * (old_forces+ state.force)
-    state.Vel .+= avg_f ./ Mass_matrix * dt
+    state.Vel += avg_f ./ Mass_matrix * dt
     # Total energy update after velocity verlet
     state.TotE = 0.5*sum(state.M .* state.Vel.^2) + state.Ene
     # Update time
@@ -98,6 +98,7 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
     
     # Preallocate storage
     trajectory_xyz = zeros(n_save, n_particles, 3)
+    Time = 0:params.output_freq*params.dt:params.n_steps*params.dt
     energies = zeros(n_save)
     temperatures = zeros(n_save)
     potential_energies = zeros(n_save)
@@ -113,7 +114,7 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
     calculate_forces!(Simulation_state)
     
     save_idx = 1
-    
+    ##
     # Main MD loop
     for step in 1:params.n_steps
         # Integration step
@@ -129,7 +130,7 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
             temperatures[save_idx] = temperature(Simulation_state)
             potential_energies[save_idx] = Simulation_state.Ene
             
-            if verbose && (save_idx % 10 == 0 || save_idx == 1)
+            if verbose
                 @printf("Step %6d: E = %12.6f, T = %12.6f, PE = %12.6f\n",
                        step, energies[save_idx], temperatures[save_idx], 
                        potential_energies[save_idx])
@@ -138,7 +139,8 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
             save_idx += 1
         end
     end
-    trajectory = Trajectory(trajectory_xyz,energies,temperatures,potential_energies,system.Atoms)
+    #Time = 0:params.dt:params.dt*params.n_steps
+    trajectory = Trajectory(system.Atoms,trajectory_xyz,Time,energies,temperatures,potential_energies)
 
     return trajectory, Simulation_state 
 end
@@ -231,6 +233,7 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
     temperatures = zeros(max_saves)
     potential_energies = zeros(max_saves)
     Simulation_state = deepcopy(Initial_state)
+    Time = 0:params.output_freq*params.dt:params.n_steps*params.n_steps
 
     if verbose
         println("\n=============== Running Damped Optimization (FIRE) ============")
@@ -238,7 +241,7 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
         println("\t dt: $(params.dt) \t Output frequency: $(params.output_freq)")
         println("\t --- FIRE PARAMS ---")
         println("\t\t dt: $(Fire_params.dt) \t  a: $(Fire_params.a)")
-        println("\t\t ddt: $(Fire_params.ddt) \t da: $(Fire_params.da)")
+        println("\t\t ddt_inc: $(Fire_params.ddt_inc) \t ddt_dec: $(Fire_params.ddt_dec) \t da: $(Fire_params.da)")
         println("\t\t dt_max: $(Fire_params.dt_max) \t a_min: $(Fire_params.a_min)")
     end
     
@@ -253,6 +256,11 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
     energies[save_idx] = Simulation_state.TotE
     temperatures[save_idx] = temperature(Simulation_state)
     potential_energies[save_idx] = Simulation_state.Ene
+    if verbose
+        @printf("Step %6d: PE = %12.6f, |F| = %12.6f, |v| = %12.6f\n",
+                       0.0, potential_energies[1], 
+                       norm(Simulation_state.force), norm(Simulation_state.Vel))
+    end
     save_idx = 2
     ##
     prev_pe = Simulation_state.Ene
@@ -273,24 +281,26 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
             fill!(Simulation_state.Vel, 0.0)
             Simulation_state.Coords -= 0.5*(Fire_params.dt*old_velocity + 0.25*Fire_params.dt^2*(old_forces+Simulation_state.force))
             # parameter updates
-            if Fire_params.ddt >= Fire_params.dt
-                Fire_params.ddt = Fire_params.dt/10.0
-            end
             Fire_params.a = Fire_params.a0
-            Fire_params.dt -= Fire_params.ddt
+            Fire_params.dt = Fire_params.ddt_dec*Fire_params.dt
+            if Fire_params.dt < Fire_params.dt_min
+                Fire_params.dt = Fire_params.dt_min
+            end
+
         else
             Simulation_state.Vel = (1.0 - Fire_params.a)*Simulation_state.Vel + Fire_params.a*norm(Simulation_state.Vel)*Simulation_state.force/norm(Simulation_state.force)
-            if Fire_params.da >= Fire_params.a
-                Fire_params.da = Fire_params.a/10.0
-            end
-            Fire_params.a -= Fire_params.da
-            Fire_params.dt += Fire_params.ddt
+            #if Fire_params.da >= Fire_params.a
+            #    Fire_params.da = Fire_params.a/10.0
+            #end
+            Fire_params.a = Fire_params.a * Fire_params.da
             if Fire_params.a < Fire_params.a_min
-                Fire_params.a = Fire_params.a_min
+                Fire_params.a = Fire_params.a_min 
             end
+            Fire_params.dt = Fire_params.ddt_inc*Fire_params.dt
             if Fire_params.dt > Fire_params.dt_max
                 Fire_params.dt = Fire_params.dt_max
             end
+            #
         end
         
         # Save data
@@ -300,7 +310,7 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
             temperatures[save_idx] = temperature(Simulation_state)
             potential_energies[save_idx] = Simulation_state.Ene
             
-            if verbose && (save_idx % 10 == 0 || save_idx == 1)
+            if verbose
                 @printf("Step %6d: PE = %12.6f, |F| = %12.6f, |v| = %12.6f\n",
                        step, potential_energies[save_idx], 
                        norm(Simulation_state.force), norm(Simulation_state.Vel))
@@ -326,7 +336,7 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
     
     # Trim arrays
     actual_saves = save_idx - 1
-    trajectory = Trajectory(trajectory_xyz[1:actual_saves, :, :],energies[1:actual_saves],temperatures[1:actual_saves],potential_energies[1:actual_saves],system.Atoms)
+    trajectory = Trajectory(system.Atoms,trajectory_xyz[1:actual_saves, :, :],Time[1:actual_saves],energies[1:actual_saves],temperatures[1:actual_saves],potential_energies[1:actual_saves])
     return trajectory, Simulation_state
             
 end

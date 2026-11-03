@@ -8,6 +8,10 @@ A simple molecular dynamics simulation code written in `Julia`.
 * **MD_sim_custom_PES.jl**: A sample code that works to use a custom PES. Here, it uses a `FORTRAN` PES for formaldehyde $^{1,2}$. I have integrated the `FORTRAN` code with Julia to call the function using a shared library.
 
 * **Code/** : Conatins all the back-end codes.
+ 
+**Sample animation** for an LJ cluster:
+
+<img width="600" height="400" alt="LJ_MD_run" src="https://github.com/user-attachments/assets/0f917daf-90f4-412e-9541-b0ae3b5b7815" />
 
 The code defines three main object types (implemented in `types.jl`):
 
@@ -27,6 +31,8 @@ Limitations:
 * No explicit way to grab a force field. (The user can define a way to grab a force field from another library and use it with this code)
 * No Thermostats, No PBC
 * No explicit parallelization (The MD steps are vectorized natively in Julia (but not parallelized using MPI))
+
+<img width="798" height="800" alt="maze_animation" src="https://github.com/user-attachments/assets/531261fe-9ad8-4055-baed-a0283c7cb8f0" />
 
 References
 

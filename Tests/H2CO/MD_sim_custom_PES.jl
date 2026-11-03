@@ -5,13 +5,16 @@ using Statistics
 using LinearAlgebra
 #using Unitful
 
-include("../../Base_code/Code/MD_Base.jl") # Base code
+println("Current Directoty",pwd())
+
+##
+include("../../Code/MD_Base.jl") # Base code
 using .MD_Base
 ##
-include("../../Base_code/FORTRAN_Test_PES/H2CO_triplet.jl")# custom force for H2CO system
+include("../../FORTRAN_Test_PES/H2CO_triplet.jl")# custom force for H2CO system
 ##
 # =============================================================================
-fold = "./" # Path to Current folder (or the folder to keep all the information)
+fold = "." # Path to Current folder (or the folder to keep all the information)
 # Define force and potential functions
 function V(xyz::Matrix{Float64})# custom potential
     return ch2o_pes(xyz)#u"eV"
@@ -104,4 +107,4 @@ trajectory_MD_run, Final_State_MD = run_simulation!(New_MD_state,
 write_trajectory(trajectory_MD_run, "$fold/H2CO_MD_run.xyz")
 
 
-Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,filename="$fold/MD_run_data.png",window_smooth=40,plt_tot_E=true)
+Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,window_smooth=40,plt_tot_E=true)

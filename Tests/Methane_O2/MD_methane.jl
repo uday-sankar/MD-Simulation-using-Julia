@@ -1,9 +1,10 @@
 using PythonCall
+import USM_MD as MD_Base
 
 np = pyimport("numpy")
 tb = pyimport("tblite.interface")
 ##
-using Revise
+#using Revise
 using Plots  # ]add Plots if needed
 gr()         # Use GR backend for high-quality output # Optional, for visualization
 using Statistics
@@ -13,9 +14,6 @@ using LinearAlgebra
 println("Current Directoty",pwd())
 
 ##
-include("../../Code/MD_Base.jl") # Base code
-using .MD_Base
-##
 const SYMBOL_TO_Z = Dict(
     "H" => 1, "He" => 2, "Li" => 3, "Be" => 4, "B" => 5, "C" => 6, "N" => 7,
     "O" => 8, "F" => 9, "Ne" => 10, "Na" => 11, "Mg" => 12, "Al" => 13,
@@ -23,7 +21,7 @@ const SYMBOL_TO_Z = Dict(
     # extend as needed for your systems
 )
 ##
-atoms, coords = read_xyz("./Init_simple.xyz")
+atoms, coords = MD_Base.read_xyz("./Init_simple.xyz")
 ##
 atomic_numbers = [SYMBOL_TO_Z[a] for a in atoms]
 coords_bohr = coords# .* 1.8897259886
@@ -78,23 +76,23 @@ end
 ##
 boxsize = 100.0
 ##
-system = MD_System(atoms,Get_force,Get_Energy,boxsize,false)
+system = MD_Base.MD_System(atoms,Get_force,Get_Energy,boxsize,false)
 ##
 mass_mat = get_atomic_masses(atoms)#copy(masses)#hcat(masses,masses,masses)
 ##
-State_init = SyState(atoms,coords_bohr,Vel = coords_bohr*0.0,force = coords_bohr*0.0,M = mass_mat)
+State_init = MD_Base.SyState(atoms,coords_bohr,Vel = coords_bohr*0.0,force = coords_bohr*0.0,M = mass_mat)
 # Assiging velocity
 ET = 0.005#Total kinetic energy to be distributed as K.E.
-New_MD_state = Recenter_and_vel(State_init,ET)
+New_MD_state = MD_Base.Recenter_and_vel(State_init,ET)
 ##
-params = SimulationParams(n_steps=1000,dt=0.1,output_freq=1, boundary_size=20)
+params = MD_Base.SimulationParams(n_steps=1000,dt=0.1,output_freq=1)
 # Run simulation
-trajectory_MD_run, Final_State_MD = run_simulation!(New_MD_state,
+trajectory_MD_run, Final_State_MD = MD_Base.run_simulation!(New_MD_state,
     system, params,
     boundary_type = :reflective,
     verbose = true
 )
-fold = "Tests/Methane_O2"
-write_trajectory(trajectory_MD_run, "$fold/MD_run.xyz")
+fold = "./"
+MD_Base.write_trajectory(trajectory_MD_run, "$fold/MD_run.xyz")
 ##
-Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,window_smooth=40,plt_tot_E=true)
+MD_Base.Plot_data(trajectory_MD_run,1:size(trajectory_MD_run.PE,1); smooth_flag=false,window_smooth=40,plt_tot_E=true)

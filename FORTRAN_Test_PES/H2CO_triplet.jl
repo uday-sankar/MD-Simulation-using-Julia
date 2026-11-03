@@ -2,6 +2,9 @@
 const LIBCH2O = "CH2O_PIPNN_GNU_x86.so" # location of the compiled (as a shared library) fortran code
 const PES_PATH = "./" # location of the current folder
 
+# Wrapper for a compiled Fortran potential energy surface (CH2O, PIP-NN).
+# Fortran passes every argument by reference, so all scalars go in as Ref
+# and all arrays as pointers to preallocated buffers.
 function ch2o_pes(x::Matrix{Float64})
     @assert size(x) == (4, 3) "Input must be 4×3 (H1,H2,C,O × x,y,z)"
     
@@ -43,7 +46,12 @@ function test_ch2o()
     ]
     energy = ch2o_pes(coords)
     println("\n Func Call Suecessfull \n CH2O Energy: $energy Hartree")
-    print(" If Energy = -2.4502807685963415 Hartree Function excecution sucessfull\n ===== !!!! Done !!!! =====")
+    if energy == -2.4502807685963415
+        print("Energy check passed! \nEnergy = -2.4502807685963415 Hartree Function excecution sucessfull\n ===== !!!! Done !!!! =====\n")
+    else
+        print("Energy check failed! \nEnergy not equal to -2.4502807685963415 Hartree Function excecution error\n ===== !!!! FAILED !!!! =====\n")
+    end
+    
 end
 
 # Run test

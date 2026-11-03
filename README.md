@@ -1,8 +1,8 @@
-## MD manual
+# MD manual
 
 A simple molecular dynamics simulation code written in `Julia`.
 
-**Files:**
+## Files
 * **MD_sim.jl** : A sample MD code with LJ Potential
 
 * **MD_sim_custom_PES.jl**: A sample code that works to use a custom PES. Here, it uses a `FORTRAN` PES for formaldehyde $^{1,2}$. I have integrated the `FORTRAN` code with Julia to call the function using a shared library.
@@ -12,6 +12,14 @@ A simple molecular dynamics simulation code written in `Julia`.
 **Sample animation** for an LJ cluster:
 
 <img width="600" height="400" alt="LJ_MD_run" src="https://github.com/user-attachments/assets/0f917daf-90f4-412e-9541-b0ae3b5b7815" />
+
+## Using the Code
+To use the code download the entire ```Code``` folder to your system. And run this code from your julia terminal.
+```
+import Pkg
+Pkg.develop(path="/path/to/Code")
+```
+## Code details
 
 The code defines three main object types (implemented in `types.jl`):
 

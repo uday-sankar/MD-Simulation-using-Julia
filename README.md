@@ -42,7 +42,10 @@ Limitations:
 
 <img width="798" height="800" alt="maze_animation" src="https://github.com/user-attachments/assets/531261fe-9ad8-4055-baed-a0283c7cb8f0" />
 
-References
+## Note for using FORTRAN H2CO PES
+If using the FORTRAN PES for triplet formaldehyde additional configuration of files is needed.
+check readme.md inside the folder FORTRAN_Test_PES.
+## References
 
 1: The sample H2CO PES was obtained from the chempotpy library, which used a PIP-NN from another publication:
 PIP NN: https://pubs.rsc.org/en/content/articlelanding/2017/cp/c7cp04578f,

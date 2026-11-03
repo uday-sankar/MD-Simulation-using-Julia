@@ -1,3 +1,20 @@
+# User Notes
+# Usage
+To use this FORTRAN PES use the appropriate compiled fortran library.
+Download this folder change the path variables for the PES in ```H2CO_triplet.jl```.
+Use:
+- ```CH2O_PIPNN_GNU_x86.s0```: Linux system
+- ```CH2O_PIPNN.dylib```: for mac
+
+Change ```LIBCH2O ``` and ```PES_PATH``` in H2CO_triplet.jl with the appropriate variable names in your system
+
+You can also complie the FORTRAN file ```CH2O_PIPNN.f90``` as a shared library using gfortran for your OS.
+## Files
+The folder CH2O contain the weights and biases for the PIPNN.
+This fodler is needed for using the PES
+
+## Reference
+
 This FORTRAN PES is not my own.
 The PES was obtained from the chempotpy library which used a PIP-NN from another publication:
 PIP NN: https://pubs.rsc.org/en/content/articlelanding/2017/cp/c7cp04578f, 

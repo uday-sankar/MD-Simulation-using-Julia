@@ -109,7 +109,13 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
         println("\t Particles: $n_particles \t Steps: $(params.n_steps)")
         println("\t dt: $(params.dt) \t Output frequency: $(params.output_freq)")
     end
-    
+    ##
+    mkpath(params.Out_Dir)# creating an output directory
+    log_path = joinpath(params.Out_Dir, "_MD_log.txt")   # or wherever you want the output to go
+    logio = open(log_path, "w")
+    @printf(logio,  "%6s %12s %12s %12s\n",
+        "step", "E", "T", "PE")
+    ##
     # Initial force calculation
     calculate_forces!(Simulation_state)
     
@@ -129,13 +135,10 @@ function run_simulation!(Initial_state::SyState,system::MD_System, params::Simul
             energies[save_idx] = Simulation_state.TotE
             temperatures[save_idx] = temperature(Simulation_state)
             potential_energies[save_idx] = Simulation_state.Ene
-            
-            if verbose
-                @printf("Step %6d: E = %12.6f, T = %12.6f, PE = %12.6f\n",
+            @printf(logio,  "%6d %12.6f %12.6f %12.6f\n",
                        step, energies[save_idx], temperatures[save_idx], 
                        potential_energies[save_idx])
-            end
-            
+            flush(logio)
             save_idx += 1
         end
     end
@@ -206,6 +209,7 @@ function run_damped_optimization!(Initial_state::SyState,system::MD_System, para
                 @printf("Step %6d: Tot. E = %12.6f, Temp = %12.6f, PE = %12.6f, dPE = %12.6f\n",
                        step, energies[save_idx], temperatures[save_idx], 
                        potential_energies[save_idx], dE)
+                
             end
             if abs(dE) < tol #&& norm(Simulation_state.force) < tol
                 print("Optimization done")
@@ -220,8 +224,7 @@ function run_damped_optimization!(Initial_state::SyState,system::MD_System, para
     return trajectory, Simulation_state 
 end
 
-function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System, params::SimulationParams, Fire_params::FIRE_params; 
-                                 verbose=true, tol=1e-12)
+function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System, params::SimulationParams, Fire_params::FIRE_params; verbose=true)
     
     n_particles = system.N_atoms#size(system.positions, 1)
     max_saves = params.n_steps ÷ params.output_freq + 1
@@ -256,12 +259,21 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
     energies[save_idx] = Simulation_state.TotE
     temperatures[save_idx] = temperature(Simulation_state)
     potential_energies[save_idx] = Simulation_state.Ene
-    if verbose
-        @printf("Step %6d: PE = %12.6f, |F| = %12.6f, |v| = %12.6f\n",
-                       0.0, potential_energies[1], 
-                       norm(Simulation_state.force), norm(Simulation_state.Vel))
-    end
     save_idx = 2
+    ##
+    mkpath(params.Out_Dir)# creating an output directory
+    log_path = joinpath(params.Out_Dir, "_FIRE_log.txt")   # or wherever you want the output to go
+    logio = open(log_path, "w")                   # "a" appends to an existing file instead of overwriting it
+    @printf(logio, "%6s  %12s  %12s  %12s  %14s  %12s\n",
+        "step", "PE", "dE", "|F|", "max(F_atom)", "|v|")
+    max_atomforce = maximum(sqrt.(diag(Simulation_state.force * Simulation_state.force')))
+    force_norm = norm(Simulation_state.force)
+    vel_norm = norm(Simulation_state.Vel)
+    ##
+    @printf(logio, "%6d  %12.6f  %12.6f  %12.6f  %14.6f  %12.6f\n",
+    0, energies[1],
+    0.0, force_norm, max_atomforce, vel_norm)
+    flush(logio) 
     ##
     prev_pe = Simulation_state.Ene
     # Main MD loop
@@ -309,19 +321,21 @@ function run_damped_optimization_FIRE!(Initial_state::SyState,system::MD_System,
             energies[save_idx] = Simulation_state.TotE
             temperatures[save_idx] = temperature(Simulation_state)
             potential_energies[save_idx] = Simulation_state.Ene
-            
-            if verbose
-                @printf("Step %6d: PE = %12.6f, |F| = %12.6f, |v| = %12.6f\n",
-                       step, potential_energies[save_idx], 
-                       norm(Simulation_state.force), norm(Simulation_state.Vel))
-            end
-            
-            # Check convergence
+            ##
+            # convergence parameters
             pe_change = abs(Simulation_state.Ene - prev_pe)
+            max_atomforce = maximum(sqrt.(diag(Simulation_state.force * Simulation_state.force')))
             force_norm = norm(Simulation_state.force)
             vel_norm = norm(Simulation_state.Vel)
+            ##
+            @printf(logio, "%6d  %12.6f  %12.6f  %12.6f  %14.6f  %12.6f\n",
+            step, potential_energies[save_idx],
+            pe_change, force_norm, max_atomforce, vel_norm)
+            flush(logio)   # makes each line appear in the file right away
             
-            if pe_change < tol && force_norm < tol && vel_norm < tol
+            
+            # Check convergence
+            if pe_change < params.de_norm && force_norm < params.f_norm && max_atomforce < params.f_max
                 if verbose
                     println("Convergence reached after $step steps")
                 end

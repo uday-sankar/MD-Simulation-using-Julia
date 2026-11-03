@@ -145,9 +145,15 @@ struct SimulationParams
     n_steps::Int 
     dt::Float64
     output_freq::Int 
+    ## for minimization protocols
+    de_norm::Float64
+    f_norm::Float64
+    f_max::Float64
+    ##
+    Out_Dir::String
     #boundary_size::Float64
-    function SimulationParams(;n_steps = 100, dt=0.1, output_freq = 5)
-        new(n_steps,dt,output_freq)
+    function SimulationParams(;n_steps = 100, dt=0.1, output_freq = 5, de_norm=1e-3, f_norm=1e-2, f_max=5e-2, Out_Dir="Outputs")
+        new(n_steps,dt,output_freq,de_norm,f_norm,f_max,Out_Dir)
     end
 end
 

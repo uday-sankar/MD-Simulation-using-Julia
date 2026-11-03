@@ -1,6 +1,9 @@
 # Get_PES_test.jl - ALL POINTERS VERSION
-const LIBCH2O = "CH2O_PIPNN_GNU_x86.so" # location of the compiled (as a shared library) fortran code
-const PES_PATH = "./" # location of the current folder
+# Use absolute paths to the compiled fortranlibrary and the current folder (where the PES is located).
+const LIBCH2O = "/Users/upm5017/Documents/Work/MD_sim/Code/Base_code/FORTRAN_Test_PES/CH2O_PIPNN.dylib" # location of the compiled (as a shared library) fortran code
+# if GNU 
+#const LIBCH2O = "/Path/to/FORTRAN_COM_LIB/CH2O_PIPNN_GNU_x86.so" 
+const PES_PATH = "/Users/upm5017/Documents/Work/MD_sim/Code/Base_code/FORTRAN_Test_PES/" # location of the current folder
 
 # Wrapper for a compiled Fortran potential energy surface (CH2O, PIP-NN).
 # Fortran passes every argument by reference, so all scalars go in as Ref

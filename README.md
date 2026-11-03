@@ -42,6 +42,14 @@ Limitations:
 
 <img width="798" height="800" alt="maze_animation" src="https://github.com/user-attachments/assets/531261fe-9ad8-4055-baed-a0283c7cb8f0" />
 
+## Notes for XTB (through Pycall)
+Use conda activate to initiuate the corerct python enviornment in which tblite is installed.
+Then do:
+```export JULIA_CONDAPKG_BACKEND=Null # tell CondaPkg not to manage an env```
+```export JULIA_PYTHONCALL_EXE="$(which python)"  # use this env's interpreter```
+Verify this by:
+```julia -e 'using PythonCall; println(pyimport("sys").executable); println(pyimport("numpy").__version__)'```
+
 ## Note for using FORTRAN H2CO PES
 If using the FORTRAN PES for triplet formaldehyde additional configuration of files is needed.
 check readme.md inside the folder FORTRAN_Test_PES.
